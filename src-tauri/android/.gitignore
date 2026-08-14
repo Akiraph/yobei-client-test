@@ -1,0 +1,11 @@
+*
+
+!.gitignore
+!README.md
+!settings.gradle.kts
+!build.gradle.kts
+!app/
+!app/.gitignore
+!app/build.gradle.kts
+!app/src/
+!app/src/**

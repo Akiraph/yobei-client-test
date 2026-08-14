@@ -1,0 +1,42 @@
+[package]
+name = "yobei-core"
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0"
+
+[lib]
+name = "yobei_core"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["native"]
+native = ["dep:rusqlite", "dep:p256"]
+wasm = ["dep:wasm-bindgen"]
+
+[dependencies]
+argon2 = "0.5"
+aes-gcm = "0.10"
+base64 = "0.22"
+csv = "1"
+data-encoding = "2"
+hkdf = "0.12"
+hmac = "0.12"
+p256 = { version = "0.13", features = ["ecdh"], optional = true }
+rand_core = "0.6"
+sha1 = "0.10"
+sha2 = "0.10"
+rand = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4", "rng-getrandom"] }
+rusqlite = { version = "0.31", features = ["bundled"], optional = true }
+chrono = "0.4"
+zeroize = { version = "1", features = ["derive"] }
+wasm-bindgen = { version = "0.2", optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+getrandom_04 = { package = "getrandom", version = "0.4", features = ["wasm_js"] }
+
+[dev-dependencies]
+tempfile = "3"

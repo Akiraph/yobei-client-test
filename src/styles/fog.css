@@ -1,0 +1,295 @@
+:root {
+  --fog-50:  #FBFDFF;
+  --fog-100: #F0F5FB;
+  --fog-150: #E4EEF8;
+  --fog-200: #D2E2F0;
+  --fog-300: #B5CBE0;
+  --fog-400: #8FA5BE;
+  --fog-500: #647A99;
+  --fog-700: #38475F;
+  --fog-800: #1F2A3D;
+  --fog-900: #0F1726;
+
+  --sky-100: #E7F0F8;
+  --sky-200: #DCE8F4;
+  --sky-300: #CCDDEE;
+
+  --blue:         #4A7FCC;
+  --blue-bg:      #EBF1FA;
+  --lavender:     #8B7FB8;
+  --lavender-bg:  #F0EEF7;
+  --sky:          #6FA3CC;
+  --sky-bg:       #EAF2F9;
+  --rose:         #C4859A;
+  --rose-bg:      #F8EFF3;
+  --jade:         #6FA896;
+  --jade-bg:      #EAF4F0;
+  --amber:        #C4A265;
+  --amber-bg:     #F8F3E8;
+  --danger:       #C45656;
+  --danger-bg:    #F8EDED;
+
+  --surface:        rgba(251, 252, 254, 0.6);
+  --surface-hover:  rgba(251, 252, 254, 0.82);
+  --surface-active: rgba(240, 245, 251, 0.9);
+
+  --shadow-xs:   0 1px 2px rgba(35, 47, 73, 0.04);
+  --shadow-sm:   0 2px 8px rgba(35, 47, 73, 0.05);
+  --shadow-md:   0 4px 16px rgba(35, 47, 73, 0.06), 0 1px 4px rgba(35, 47, 73, 0.04);
+  --shadow-lg:   0 12px 40px rgba(35, 47, 73, 0.08), 0 4px 12px rgba(35, 47, 73, 0.05);
+  --shadow-lift: 0 20px 60px rgba(35, 47, 73, 0.1), 0 8px 20px rgba(35, 47, 73, 0.06);
+
+  --ease-fog:     cubic-bezier(0.25, 0.8, 0.35, 1);
+  --ease-breathe: cubic-bezier(0.37, 0, 0.63, 1);
+  --ease-spring:  cubic-bezier(0.34, 1.4, 0.64, 1);
+  --dur-instant: 100ms;
+  --dur-fast:    200ms;
+  --dur-med:     400ms;
+  --dur-slow:    800ms;
+  --dur-fog:     1200ms;
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --r-xl: 28px;
+
+  --touch-min: 44px;
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --fog-50:  #0F1726;
+  --fog-100: #151E30;
+  --fog-150: #1B263C;
+  --fog-200: #22304C;
+  --fog-300: #31405E;
+  --fog-400: #4E5D82;
+  --fog-500: #7C8BAC;
+  --fog-700: #AAB5CE;
+  --fog-800: #D0D7E7;
+  --fog-900: #E8EBF4;
+
+  --sky-100: #141C2E;
+  --sky-200: #1A2338;
+  --sky-300: #202B44;
+
+  --blue-bg:      #1E2C4C;
+  --lavender-bg:  #252040;
+  --sky-bg:       #1C2C44;
+  --rose-bg:      #2E2030;
+  --jade-bg:      #1A2E28;
+  --amber-bg:     #2E2820;
+  --danger-bg:    #332025;
+
+  --surface:        rgba(24, 34, 59, 0.6);
+  --surface-hover:  rgba(30, 42, 71, 0.8);
+  --surface-active: rgba(21, 30, 48, 0.9);
+
+  --shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-sm:   0 2px 8px rgba(0, 0, 0, 0.22);
+  --shadow-md:   0 4px 16px rgba(0, 0, 0, 0.24), 0 1px 4px rgba(0, 0, 0, 0.14);
+  --shadow-lg:   0 12px 40px rgba(0, 0, 0, 0.28), 0 4px 12px rgba(0, 0, 0, 0.16);
+  --shadow-lift: 0 20px 60px rgba(0, 0, 0, 0.32), 0 8px 20px rgba(0, 0, 0, 0.18);
+
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --fog-50:  #0F1726;
+    --fog-100: #151E30;
+    --fog-150: #1B263C;
+    --fog-200: #22304C;
+    --fog-300: #31405E;
+    --fog-400: #4E5D82;
+    --fog-500: #7C8BAC;
+    --fog-700: #AAB5CE;
+    --fog-800: #D0D7E7;
+    --fog-900: #E8EBF4;
+
+    --sky-100: #141C2E;
+    --sky-200: #1A2338;
+    --sky-300: #202B44;
+
+    --blue-bg:      #1E2C4C;
+    --lavender-bg:  #252040;
+    --sky-bg:       #1C2C44;
+    --rose-bg:      #2E2030;
+    --jade-bg:      #1A2E28;
+    --amber-bg:     #2E2820;
+    --danger-bg:    #332025;
+
+    --surface:        rgba(24, 34, 59, 0.6);
+    --surface-hover:  rgba(30, 42, 71, 0.8);
+    --surface-active: rgba(21, 30, 48, 0.9);
+
+    --shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-sm:   0 2px 8px rgba(0, 0, 0, 0.22);
+    --shadow-md:   0 4px 16px rgba(0, 0, 0, 0.24), 0 1px 4px rgba(0, 0, 0, 0.14);
+    --shadow-lg:   0 12px 40px rgba(0, 0, 0, 0.28), 0 4px 12px rgba(0, 0, 0, 0.16);
+    --shadow-lift: 0 20px 60px rgba(0, 0, 0, 0.32), 0 8px 20px rgba(0, 0, 0, 0.18);
+
+    color-scheme: dark;
+  }
+}
+
+/* ── 天空层:真正的淡蓝,顶部偏天蓝,向下渐淡到白 ──────────── */
+
+.sky-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    var(--sky-300) 0%,
+    var(--sky-200) 45%,
+    var(--sky-100) 78%,
+    var(--fog-100) 100%
+  );
+  transition: background var(--dur-fog) var(--ease-fog);
+}
+
+/* ── 分层流雾:白色半透明雾斑,浮在天空之上漂移 ────────────────
+   不是纯色,也不是单纯渐变:
+   · 一层天空底色(淡蓝渐变)
+   · 三层缓慢漂移的白雾(radial-gradient,不同周期/方向)
+   · 一层极淡噪点(SVG fractalNoise),破掉"塑料感"           */
+
+.fog-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  transition: background var(--dur-fog) var(--ease-fog);
+  contain: layout style paint;
+}
+
+/* 雾斑:用 transform 平移 + 缩放,形成"雾在流动"的错觉
+   不用 filter:blur(70px)(逐帧重算高斯模糊太重),改用
+   两段式软渐变模拟同样的柔和边缘,transform 动画走合成层。 */
+.fog-blob {
+  position: absolute;
+  will-change: transform;
+}
+
+.fog-blob-1 {
+  width: 64vmax; height: 48vmax;
+  left: -16vmax; top: -18vmax;
+  border-radius: 62% 38% 55% 45% / 48% 52% 48% 52%;
+  background: radial-gradient(circle,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0.08) 52%,
+    rgba(255, 255, 255, 0) 74%);
+  animation: fog-drift-1 36s ease-in-out infinite;
+}
+
+.fog-blob-2 {
+  width: 56vmax; height: 42vmax;
+  right: -14vmax; top: 4vmax;
+  border-radius: 45% 55% 60% 40% / 55% 45% 55% 45%;
+  background: radial-gradient(circle,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.06) 52%,
+    rgba(255, 255, 255, 0) 74%);
+  animation: fog-drift-2 44s ease-in-out infinite;
+}
+
+/* 底部雾堤:让地平线附近有一层持续的、更厚的雾 */
+.fog-bank {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -8vmax;
+  height: 34vmax;
+  background: radial-gradient(
+    ellipse 100% 60% at 50% 100%,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.04) 45%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  animation: fog-bank-breathe 30s ease-in-out infinite;
+}
+
+@keyframes fog-bank-breathe {
+  0%, 100% { opacity: 0.9; }
+  50%      { opacity: 0.7; }
+}
+
+@keyframes fog-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(6vmax, 4vmax) scale(1.12); }
+  66%      { transform: translate(-4vmax, 7vmax) scale(0.94); }
+}
+
+@keyframes fog-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(-7vmax, 5vmax) scale(1.15); }
+}
+
+[data-theme="dark"] .fog-blob-1,
+[data-theme="dark"] .fog-blob-2 {
+  background: radial-gradient(circle,
+    rgba(180, 196, 224, 0.12) 0%,
+    rgba(180, 196, 224, 0.04) 52%,
+    rgba(180, 196, 224, 0) 74%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .fog-blob-1,
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .fog-blob-2 {
+    background: radial-gradient(circle,
+      rgba(180, 196, 224, 0.12) 0%,
+      rgba(180, 196, 224, 0.04) 52%,
+      rgba(180, 196, 224, 0) 74%);
+  }
+}
+
+/* ── 呼吸:界面待机的微透明波动 ─────────────────────────── */
+
+@keyframes fog-breathe {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.98; }
+}
+
+.fog-breathe {
+  animation: fog-breathe 5s var(--ease-breathe) infinite;
+}
+
+/* ── 解雾 / 凝聚 ─────────────────────────────────────────── */
+
+.fog-reveal {
+  animation: fog-reveal var(--dur-med) var(--ease-fog) both;
+}
+
+@keyframes fog-reveal {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.fog-condense {
+  animation: fog-condense var(--dur-slow) var(--ease-fog) both;
+}
+
+@keyframes fog-condense {
+  from { filter: blur(0);   opacity: 1; }
+  to   { filter: blur(4px); opacity: 0.7; }
+}
+
+/* ── 擦雾:密码显示/隐藏 ─────────────────────────────────── */
+
+.fog-text {
+  filter: blur(5px);
+  user-select: none;
+  transition: filter var(--dur-fog) var(--ease-fog);
+  cursor: pointer;
+}
+
+.fog-text:hover { filter: blur(3.5px); }
+
+.fog-text.revealed {
+  filter: blur(0);
+  user-select: auto;
+}

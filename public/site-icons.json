@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "icons": {
+    "google.com": "https://cdn.simpleicons.org/google/4285F4",
+    "github.com": "https://cdn.simpleicons.org/github/181717",
+    "cloudflare.com": "https://cdn.simpleicons.org/cloudflare/F38020",
+    "microsoft.com": "https://cdn.simpleicons.org/microsoft/5E5CE6",
+    "microsoftonline.com": "https://cdn.simpleicons.org/microsoft/5E5CE6",
+    "apple.com": "https://cdn.simpleicons.org/apple/000000",
+    "amazon.com": "https://cdn.simpleicons.org/amazon/FF9900",
+    "amazonaws.com": "https://cdn.simpleicons.org/amazonaws/232F3E",
+    "figma.com": "https://cdn.simpleicons.org/figma/F24E1E",
+    "notion.so": "https://cdn.simpleicons.org/notion/000000",
+    "vercel.com": "https://cdn.simpleicons.org/vercel/000000",
+    "discord.com": "https://cdn.simpleicons.org/discord/5865F2",
+    "gitlab.com": "https://cdn.simpleicons.org/gitlab/FC6D26",
+    "bitbucket.org": "https://cdn.simpleicons.org/bitbucket/0052CC",
+    "openai.com": "https://cdn.simpleicons.org/openai/412991",
+    "chatgpt.com": "https://cdn.simpleicons.org/openai/412991",
+    "facebook.com": "https://cdn.simpleicons.org/facebook/0866FF",
+    "linkedin.com": "https://cdn.simpleicons.org/linkedin/0A66C2",
+    "slack.com": "https://cdn.simpleicons.org/slack/4A154B",
+    "dropbox.com": "https://cdn.simpleicons.org/dropbox/0061FF",
+    "bitwarden.com": "https://cdn.simpleicons.org/bitwarden/175DDC",
+    "proton.me": "https://cdn.simpleicons.org/proton/6D4AFF",
+    "telegram.org": "https://cdn.simpleicons.org/telegram/26A5E4",
+    "trello.com": "https://cdn.simpleicons.org/trello/0052CC",
+    "atlassian.com": "https://cdn.simpleicons.org/atlassian/1868DB",
+    "okta.com": "https://cdn.simpleicons.org/okta/007DC1",
+    "auth0.com": "https://cdn.simpleicons.org/auth0/EB5424"
+  }
+}

@@ -1,0 +1,15 @@
+*
+
+!.gitignore
+!src/
+!src/**
+!icons/
+!icons/**
+!_locales/
+!_locales/**
+!manifest.json
+!package.json
+!bun.lock
+!tsconfig.json
+!vite.config.ts
+!vite.content.config.ts

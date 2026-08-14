@@ -1,0 +1,55 @@
+[package]
+name = "yobei-client"
+version = "0.1.0"
+description = "Yobei zero-knowledge password manager"
+license = "AGPL-3.0"
+edition = "2024"
+
+[workspace]
+resolver = "2"
+members = ["crates/tauri-plugin-yobei-biometric"]
+
+[lib]
+name = "yobei_client_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri-plugin-window-state = "2.4.1"
+tauri-plugin-single-instance = "2.4.3"
+tauri-plugin-os = "2.3.2"
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-yobei-biometric = { path = "crates/tauri-plugin-yobei-biometric" }
+rusqlite = { version = "0.31", features = ["bundled"] }
+yobei-core = { path = "../core" }
+uuid = { version = "1", features = ["v4"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "blocking", "rustls-tls"] }
+chrono = "0.4"
+tokio = { version = "1", features = ["net", "sync", "rt", "time", "io-util", "macros"] }
+tokio-tungstenite = "0.24"
+futures-util = "0.3"
+base64 = "0.22"
+zeroize = "1"
+rqrr = "0.8"
+arboard = "3"
+
+[dev-dependencies]
+qrcode = "0.14"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = ["Win32_Foundation", "Win32_Security_Cryptography", "Security_Credentials_UI", "Win32_UI_WindowsAndMessaging", "Win32_UI_Input_KeyboardAndMouse", "Win32_System_SystemInformation", "Win32_System_StationsAndDesktops"] }
+winreg = "0.52"
+
+[profile.release]
+opt-level = "s"
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"

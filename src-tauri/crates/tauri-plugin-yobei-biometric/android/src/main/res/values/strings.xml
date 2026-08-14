@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="biometric_title">Yobei</string>
+    <string name="biometric_subtitle">Continue with biometrics</string>
+    <string name="biometric_protect_subtitle">Confirm to protect your vault</string>
+    <string name="biometric_unprotect_subtitle">Confirm to unlock your vault</string>
+    <string name="biometric_cancel">Cancel</string>
+    <string name="biometric_unavailable">Biometric authentication is unavailable</string>
+    <string name="biometric_cancelled">Biometric authentication was cancelled</string>
+    <string name="biometric_locked_out">Biometric authentication is temporarily locked</string>
+    <string name="biometric_timeout">Biometric authentication timed out</string>
+    <string name="biometric_failed">Biometric authentication failed</string>
+    <string name="biometric_prompt_failed">Unable to start biometric authentication</string>
+    <string name="biometric_invalid_input">Invalid biometric request data</string>
+    <string name="biometric_invalid_blob">Invalid protected data</string>
+    <string name="biometric_key_unavailable">Secure biometric key is unavailable</string>
+    <string name="biometric_key_invalidated">Biometric enrollment changed; set up biometric unlock again</string>
+    <string name="biometric_crypto_failed">Secure biometric operation failed</string>
+</resources>

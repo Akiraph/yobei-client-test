@@ -1,0 +1,23 @@
+{
+  "name": "yobei-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0",
+  "description": "Yobei browser extension",
+  "scripts": {
+    "dev": "vite build --watch && vite build -c vite.content.config.ts --watch",
+    "build": "vite build && vite build -c vite.content.config.ts",
+    "typecheck": "tsc --noEmit",
+    "wasm": "wasm-pack build ../core --target web --out-dir src/background/wasm -- --no-default-features --features wasm"
+  },
+  "dependencies": {
+    "solid-js": "^1.9.3"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.300",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.3",
+    "vite-plugin-solid": "^2.11.0"
+  }
+}

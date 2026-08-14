@@ -1,0 +1,45 @@
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("org.mozilla.rust-android-gradle")
+}
+
+android {
+    namespace = "com.akiraph.yobei"
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId = "com.akiraph.yobei"
+        minSdk = 24
+        targetSdk = 36
+        versionCode = 1
+        versionName = "0.1.0"
+        manifestPlaceholders["usesCleartextTraffic"] = "false"
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+
+rust {
+    rootDirRel = ".."
+}
+
+dependencies {
+    implementation("androidx.webkit:webkit:1.14.0")
+    implementation("androidx.appcompat:appcompat:1.7.1")
+    implementation("androidx.activity:activity-ktx:1.10.1")
+    implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.lifecycle:lifecycle-process:2.10.0")
+}
+
+val tauriBuildGradle = file("tauri.build.gradle.kts")
+if (tauriBuildGradle.isFile) {
+    apply(from = tauriBuildGradle)
+}

@@ -1,0 +1,17 @@
+*
+
+!.gitignore
+!src/
+!src/**
+!android/
+!android/**
+!capabilities/
+!capabilities/**
+!crates/
+!crates/**
+!icons/
+!icons/**
+!Cargo.toml
+!Cargo.lock
+!build.rs
+!tauri.conf.json

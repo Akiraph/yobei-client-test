@@ -1,0 +1,11 @@
+*
+
+!.gitignore
+!src/
+!src/**
+!android/
+!android/src/
+!android/src/**
+!android/build.gradle.kts
+!Cargo.toml
+!build.rs

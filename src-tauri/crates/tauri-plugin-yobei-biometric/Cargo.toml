@@ -1,0 +1,20 @@
+[package]
+name = "tauri-plugin-yobei-biometric"
+version = "0.1.0"
+description = "Android biometric storage for Yobei"
+license = "AGPL-3.0"
+edition = "2024"
+links = "tauri-plugin-yobei-biometric"
+
+[lib]
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-plugin = { version = "2", features = ["build"] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22"
+yobei-core = { path = "../../../core", default-features = false }
