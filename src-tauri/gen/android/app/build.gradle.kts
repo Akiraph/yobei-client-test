@@ -39,8 +39,21 @@ android {
     }
 }
 
-rust {
-    rootDirRel = ".."
+cargo {
+    module = "../.."
+    libname = "yobei_client_lib"
+    targets = listOf("arm", "arm64", "x86", "x86_64")
+    profile = if (gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }) {
+        "release"
+    } else {
+        "debug"
+    }
+}
+
+tasks.configureEach {
+    if (name == "preBuild") {
+        dependsOn("cargoBuild")
+    }
 }
 
 dependencies {
