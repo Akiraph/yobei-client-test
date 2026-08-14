@@ -15,7 +15,7 @@ pub struct Biometric<R: Runtime>(pub PluginHandle<R>);
 #[cfg(mobile)]
 fn plugin<R: Runtime>(app: &AppHandle<R>) -> Result<&PluginHandle<R>> {
     app.try_state::<Biometric<R>>()
-        .map(|biometric| &biometric.0)
+        .map(|biometric| &biometric.inner().0)
         .ok_or(ErrorCode::BiometricUnavailable)
 }
 
