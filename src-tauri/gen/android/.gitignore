@@ -4,6 +4,7 @@
 !README.md
 !settings.gradle.kts
 !build.gradle.kts
+!gradle.properties
 !buildSrc/
 !buildSrc/build.gradle.kts
 !buildSrc/src/
