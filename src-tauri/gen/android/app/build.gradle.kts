@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.mozilla.rust-android-gradle.rust-android")
+    id("rust")
 }
 
 android {
@@ -40,21 +40,8 @@ android {
     }
 }
 
-cargo {
-    module = "../.."
-    libname = "yobei_client_lib"
-    targets = listOf("arm", "arm64", "x86", "x86_64")
-    profile = if (gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }) {
-        "release"
-    } else {
-        "debug"
-    }
-}
-
-tasks.configureEach {
-    if (name == "preBuild") {
-        dependsOn("cargoBuild")
-    }
+rust {
+    rootDirRel = "../../../"
 }
 
 dependencies {

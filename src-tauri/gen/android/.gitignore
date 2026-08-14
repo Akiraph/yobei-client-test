@@ -4,6 +4,10 @@
 !README.md
 !settings.gradle.kts
 !build.gradle.kts
+!buildSrc/
+!buildSrc/build.gradle.kts
+!buildSrc/src/
+!buildSrc/src/**
 !app/
 !app/.gitignore
 !app/build.gradle.kts
