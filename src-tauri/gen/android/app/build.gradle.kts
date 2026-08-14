@@ -17,6 +17,18 @@ android {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
     }
 
+    buildTypes {
+        getByName("debug") {
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
+            isDebuggable = true
+            isJniDebuggable = true
+            isMinifyEnabled = false
+        }
+        getByName("release") {
+            isMinifyEnabled = false
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
