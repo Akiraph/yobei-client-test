@@ -16,3 +16,4 @@
 !Cargo.lock
 !build.rs
 !tauri.conf.json
+!tauri.*.conf.json
