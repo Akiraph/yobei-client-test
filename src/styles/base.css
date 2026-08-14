@@ -30,7 +30,7 @@ body {
 }
 
 .font-serif { font-family: 'Noto Serif SC', serif; }
-.font-mono  { font-family: 'JetBrains Mono', monospace; }
+.font-mono  { font-family: 'Cascadia Code', 'Cascadia Mono', 'JetBrains Mono', monospace; }
 
 a {
   color: var(--sky);

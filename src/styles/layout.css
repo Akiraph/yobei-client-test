@@ -140,6 +140,12 @@
   font-weight: 500;
 }
 
+.nav-item:focus-visible {
+  outline: none;
+  background: var(--fog-150);
+  color: var(--fog-800);
+}
+
 .nav-icon {
   width: 16px;
   height: 16px;
@@ -154,7 +160,7 @@
 
 .nav-count {
   font-size: 10px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Cascadia Code', 'Cascadia Mono', 'JetBrains Mono', monospace;
   color: var(--fog-400);
   opacity: 0;
   transition: opacity var(--dur-fast) var(--ease-fog);
@@ -1065,7 +1071,51 @@
   color: var(--fog-700);
 }
 
+.sidebar-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(37, 40, 64, 0.22);
+  backdrop-filter: blur(2px);
+  animation: fog-fade var(--dur-fast) var(--ease-fog) both;
+}
+
+.vault-sidebar.drawer {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 31;
+  width: 260px;
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(24px);
+  box-shadow: var(--shadow-lift);
+}
+
+[data-theme="dark"] .vault-sidebar.drawer {
+  background: rgba(26, 29, 51, 0.92);
+}
+
+.list-menu-btn {
+  flex-shrink: 0;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pull-indicator {
+  padding: 10px 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--fog-400);
+}
+
 @media (max-width: 859px) {
+  .app-body { padding-top: env(safe-area-inset-top, 0px); }
+
   .vault-root { flex-direction: column; }
 
   .vault-list { width: 100%; }

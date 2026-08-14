@@ -16,11 +16,24 @@ export default function Vault() {
   const [mobile, setMobile] = createSignal(window.innerWidth < 860);
   const [pane, setPane] = createSignal<Pane>('list');
   const [editing, setEditing] = createSignal<EditState>(null);
+  const [sidebarOpen, setSidebarOpen] = createSignal(false);
+  let touchStartX = 0;
+  let touchStartY = 0;
 
   onMount(() => {
     const onResize = () => setMobile(window.innerWidth < 860);
     window.addEventListener('resize', onResize);
     onCleanup(() => window.removeEventListener('resize', onResize));
+
+    const onPop = () => {
+      if (mobile() && pane() === 'detail') {
+        setPane('list');
+        selectItem(null);
+        setEditing(null);
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    onCleanup(() => window.removeEventListener('popstate', onPop));
   });
 
   createEffect(() => {
@@ -42,11 +55,21 @@ export default function Vault() {
     });
   });
 
+  function showDetail() {
+    if (pane() === 'detail') return;
+    setPane('detail');
+    if (mobile()) history.pushState({ yobei: 'detail' }, '');
+  }
+
   function handleSelect() {
-    if (mobile()) setPane('detail');
+    if (mobile()) showDetail();
   }
 
   function handleBack() {
+    if (mobile() && history.state?.yobei === 'detail') {
+      history.back();
+      return;
+    }
     setPane('list');
     selectItem(null);
     setEditing(null);
@@ -55,12 +78,12 @@ export default function Vault() {
   function handleNew() {
     selectItem(null);
     setEditing({ mode: 'new' });
-    if (mobile()) setPane('detail');
+    if (mobile()) showDetail();
   }
 
   function handleEdit(id: string) {
     setEditing({ mode: 'edit', id });
-    if (mobile()) setPane('detail');
+    if (mobile()) showDetail();
   }
 
   async function handleDelete(id: string) {
@@ -71,11 +94,30 @@ export default function Vault() {
       return;
     }
     setEditing(null);
-    if (mobile()) setPane('list');
+    if (mobile()) handleBack();
+  }
+
+  function onTouchStart(event: TouchEvent) {
+    if (event.touches.length === 0) return;
+    touchStartX = event.touches[0].clientX;
+    touchStartY = event.touches[0].clientY;
+  }
+
+  function onTouchMove(event: TouchEvent) {
+    if (!mobile() || sidebarOpen() || event.touches.length === 0) return;
+    const dx = event.touches[0].clientX - touchStartX;
+    const dy = event.touches[0].clientY - touchStartY;
+    if (touchStartX < 28 && dx > 64 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      setSidebarOpen(true);
+    }
   }
 
   return (
-    <div class={`vault-root fog-reveal${state.condensing ? ' fog-condense' : ''}`}>
+    <div
+      class={`vault-root fog-reveal${state.condensing ? ' fog-condense' : ''}`}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+    >
       <Show when={state.showSettings}>
         <Settings onClose={() => toggleSettings(false)} />
       </Show>
@@ -87,9 +129,20 @@ export default function Vault() {
           </aside>
         </Show>
 
+        <Show when={mobile() && sidebarOpen()}>
+          <div class="sidebar-scrim" onClick={() => setSidebarOpen(false)} />
+          <aside class="vault-sidebar drawer">
+            <Sidebar onNavigate={() => setSidebarOpen(false)} />
+          </aside>
+        </Show>
+
         <Show when={!mobile() || pane() === 'list'}>
           <section class="vault-list">
-            <ItemList onSelect={handleSelect} onNew={handleNew} />
+            <ItemList
+              onSelect={handleSelect}
+              onNew={handleNew}
+              onMenu={mobile() ? () => setSidebarOpen(true) : undefined}
+            />
           </section>
         </Show>
 

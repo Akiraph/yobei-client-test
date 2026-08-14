@@ -1,11 +1,11 @@
 import { For, Show, createSignal, createEffect, onCleanup } from 'solid-js';
-import { state, setSearch, selectItem, visibleItems, saveItem, accountMatches, itemContentFor, saveAccountCredential } from '../lib/store';
+import { state, setSearch, selectItem, visibleItems, saveItem, accountMatches, itemContentFor, saveAccountCredential, runSync } from '../lib/store';
 import { computeTotp } from '../lib/ipc';
 import { copyText } from '../lib/clipboard';
 import { relativeTime } from '../lib/format';
 import { notifyError, notifyOk } from '../lib/notify';
 import { errorMessage } from '../lib/errors';
-import { IconSearch, IconPlus, IconScan } from './Icon';
+import { IconSearch, IconPlus, IconScan, IconMenu } from './Icon';
 import type { VaultItem } from '../lib/types';
 import { t } from '../lib/i18n';
 import { QrScanner } from './QrScanner';
@@ -15,12 +15,17 @@ import SiteIcon from './SiteIcon';
 interface Props {
   onSelect?: () => void;
   onNew?: () => void;
+  onMenu?: () => void;
 }
 
 export default function ItemList(props: Props) {
   const [showNewMenu, setShowNewMenu] = createSignal(false);
+  const [refreshing, setRefreshing] = createSignal(false);
   let menuRef: HTMLDivElement | undefined;
   let btnRef: HTMLButtonElement | undefined;
+  let listRef: HTMLDivElement | undefined;
+  let pullStartY = 0;
+  let pulling = false;
 
   const onDocClick = (e: MouseEvent) => {
     if (menuRef && !menuRef.contains(e.target as Node) && btnRef && !btnRef.contains(e.target as Node)) {
@@ -36,6 +41,37 @@ export default function ItemList(props: Props) {
     }
   });
   onCleanup(() => document.removeEventListener('click', onDocClick));
+
+  async function doRefresh() {
+    if (refreshing()) return;
+    setRefreshing(true);
+    try {
+      await runSync();
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  function onListTouchStart(event: TouchEvent) {
+    if (listRef && listRef.scrollTop <= 0) {
+      pullStartY = event.touches[0].clientY;
+      pulling = true;
+    } else {
+      pulling = false;
+    }
+  }
+
+  function onListTouchMove(event: TouchEvent) {
+    if (!pulling) return;
+    if (event.touches[0].clientY - pullStartY > 80) {
+      pulling = false;
+      void doRefresh();
+    }
+  }
+
+  function onListTouchEnd() {
+    pulling = false;
+  }
 
   async function handleScanAndAdd() {
     setShowNewMenu(false);
@@ -66,6 +102,15 @@ export default function ItemList(props: Props) {
         const data = await itemContentFor(item.id);
         if (accountMatches(item, data, parsed.account, parsed.service, parsed.title)) candidates.push(item);
       }
+      if (candidates.length === 0) {
+        try {
+          await saveItem({ type: 'login', data: { title: parsed.title, totp: parsed.secret, username: parsed.account } });
+          notifyOk(t('list.totpAdded', { title: parsed.title }));
+        } catch (error) {
+          notifyError(errorMessage(error, 'operation_failed'));
+        }
+        return;
+      }
       if (candidates.length === 1) {
         await saveAccountCredential(candidates[0], credentialPatch);
         notifyOk(t('list.totpUpdated', { title: candidates[0].title }));
@@ -90,6 +135,11 @@ export default function ItemList(props: Props) {
   return (
     <div class="item-list-pane">
       <div class="toolbar">
+        <Show when={props.onMenu}>
+          <button class="icon-btn list-menu-btn" onClick={props.onMenu} aria-label={t('common.menu')}>
+            <IconMenu size={18} />
+          </button>
+        </Show>
         <div class="search-box">
           <span class="search-icon"><IconSearch size={15} /></span>
           <input
@@ -120,7 +170,19 @@ export default function ItemList(props: Props) {
         </div>
       </div>
 
-      <div class="item-list" role="listbox" aria-label={t('nav.vault')}>
+      <div
+        class="item-list"
+        ref={listRef}
+        role="listbox"
+        aria-label={t('nav.vault')}
+        onTouchStart={onListTouchStart}
+        onTouchMove={onListTouchMove}
+        onTouchEnd={onListTouchEnd}
+        onTouchCancel={onListTouchEnd}
+      >
+        <Show when={refreshing()}>
+          <div class="pull-indicator">{t('nav.syncing')}</div>
+        </Show>
         <For each={visibleItems()} fallback={
           <div class="list-empty">
             <p>{t('list.empty')}</p>

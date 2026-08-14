@@ -81,8 +81,8 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Build Android release APK
-        run: bun run tauri android build --apk --ci
+      - name: Build Android release APK (split per ABI)
+        run: bun run tauri android build --apk --split-per-abi --ci
 
       - name: Sign Android release APK
         shell: bash
@@ -100,27 +100,25 @@ jobs:
 
           echo "$KEYSTORE_BASE64" | base64 -d > release.keystore.jks
 
-          UNSIGNED="$(find src-tauri/gen/android/app/build/outputs/apk -type f -name '*-release-unsigned.apk' | head -n 1)"
-          if [ -z "$UNSIGNED" ]; then
+          mapfile -t UNSIGNED < <(find src-tauri/gen/android/app/build/outputs/apk -type f -name '*-release-unsigned.apk' | sort)
+          if [ "${#UNSIGNED[@]}" -eq 0 ]; then
             echo "No unsigned APK found to sign."
             exit 1
           fi
-          echo "Unsigned APK: $UNSIGNED"
 
           BT="${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools/36.0.0"
-          SIGNED="src-tauri/gen/android/app/build/outputs/apk/release/app-universal-release-signed.apk"
-          mkdir -p "$(dirname "$SIGNED")"
-
-          "$BT/apksigner" sign \
-            --ks release.keystore.jks \
-            --ks-key-alias "$KEY_ALIAS" \
-            --ks-pass env:KEYSTORE_PASSWORD \
-            --key-pass env:KEY_PASSWORD \
-            --out "$SIGNED" \
-            "$UNSIGNED"
-
-          "$BT/apksigner" verify --print-certs "$SIGNED"
-          echo "Signed APK: $SIGNED"
+          for apk in "${UNSIGNED[@]}"; do
+            signed="${apk/-unsigned.apk/-signed.apk}"
+            "$BT/apksigner" sign \
+              --ks release.keystore.jks \
+              --ks-key-alias "$KEY_ALIAS" \
+              --ks-pass env:KEYSTORE_PASSWORD \
+              --key-pass env:KEY_PASSWORD \
+              --out "$signed" \
+              "$apk"
+            "$BT/apksigner" verify --print-certs "$signed" | grep -m1 'Signer #1 certificate DN'
+            echo "Signed: $signed"
+          done
 
       - name: Verify Android release APK
         shell: bash

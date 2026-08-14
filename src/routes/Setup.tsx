@@ -8,7 +8,7 @@ import { t } from '../lib/i18n';
 import { notifyError } from '../lib/notify';
 import { completeSetup } from '../lib/store';
 
-type Step = 'welcome' | 'create' | 'join' | 'waiting' | 'done';
+type Step = 'welcome' | 'create' | 'confirm' | 'join' | 'waiting' | 'done';
 
 export default function Setup() {
   const [step, setStep] = createSignal<Step>('welcome');
@@ -36,11 +36,10 @@ export default function Setup() {
     }
   });
 
-  const passwordStrength = () => password().length;
-
   const validPassword = () => /^\d{6}$/.test(password()) && password() === confirmation();
 
   async function createVault() {
+    if (!validPassword()) return;
     setBusy(true);
     setError('');
     try {
@@ -123,11 +122,18 @@ export default function Setup() {
         <Show when={step() === 'create'}>
           <Heading title={t('setup.passwordTitle')} hint={t('setup.passwordHint')} />
           <div class="setup-form">
-            <PinInput value={password()} ariaLabel={t('setup.passwordPlaceholder')} onInput={setPassword} autofocus />
-            <PinInput value={confirmation()} ariaLabel={t('setup.passwordConfirmPlaceholder')} onInput={setConfirmation} />
-            <div class="strength-bar">{[1, 2, 3, 4, 5, 6].map((level) => <div class={`strength-seg${passwordStrength() >= level ? ' filled' : ''}`} />)}</div>
+            <PinInput value={password()} ariaLabel={t('setup.passwordPlaceholder')} onInput={setPassword} autofocus onComplete={() => setStep('confirm')} />
+            <button class="btn btn-primary setup-cta" disabled={!/^\d{6}$/.test(password()) || busy()} onClick={() => setStep('confirm')}>{t('setup.continue')}</button>
+          </div>
+        </Show>
+
+        <Show when={step() === 'confirm'}>
+          <Heading title={t('setup.confirmTitle')} hint={t('setup.confirmHint')} />
+          <div class="setup-form">
+            <PinInput value={confirmation()} ariaLabel={t('setup.passwordConfirmPlaceholder')} onInput={setConfirmation} autofocus onComplete={() => void createVault()} />
             <Show when={confirmation() && password() !== confirmation()}><div class="setup-hint error">{t('setup.passwordMismatch')}</div></Show>
-            <button class="btn btn-primary setup-cta" disabled={!validPassword() || busy()} onClick={createVault}>{busy() ? t('common.processing') : t('setup.continue')}</button>
+            <button class="btn btn-primary setup-cta" disabled={!validPassword() || busy()} onClick={createVault}>{busy() ? t('common.processing') : t('setup.createVault')}</button>
+            <button class="btn btn-ghost setup-cta" disabled={busy()} onClick={() => { setConfirmation(''); setStep('create'); }}>{t('common.back')}</button>
           </div>
         </Show>
 

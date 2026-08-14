@@ -7,7 +7,31 @@ import { inTauri, readExternalAsset } from './ipc';
 import { isDesktop } from './window';
 
 let resourcePromise: Promise<SiteIconResource> | undefined;
-const resolvedCache = new Map<string, string | undefined>();
+const RESOLVED_CACHE_KEY = 'yobei.site-icons.v1';
+
+function loadResolvedCache(): Array<[string, string]> {
+  try {
+    const raw = localStorage.getItem(RESOLVED_CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as Array<[string, string]>;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+const resolvedCache = new Map<string, string | undefined>(loadResolvedCache());
+
+function persistResolvedCache() {
+  try {
+    const entries: Array<[string, string]> = [];
+    for (const [host, value] of resolvedCache) {
+      if (value) entries.push([host, value]);
+    }
+    localStorage.setItem(RESOLVED_CACHE_KEY, JSON.stringify(entries));
+  } catch {
+  }
+}
 
 function loadResource(): Promise<SiteIconResource> {
   if (!resourcePromise) {
@@ -63,5 +87,6 @@ export async function siteIconUrl(url?: string, title?: string): Promise<string 
   }
 
   resolvedCache.set(host, resolved);
+  persistResolvedCache();
   return resolved;
 }
