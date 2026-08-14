@@ -41,7 +41,7 @@ jobs:
           if-no-files-found: warn
 
   android:
-    name: Android (APK)
+    name: Android (release APK)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -63,6 +63,9 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install Android SDK packages
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
       - name: Cache Rust
         uses: swatinem/rust-cache@v2
         with:
@@ -73,12 +76,22 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Build Android APK
-        run: bun run tauri android build --apk --debug
+      - name: Build Android release APK
+        run: bun run tauri android build --apk --ci
 
-      - name: Upload APK
+      - name: Verify Android release APK
+        shell: bash
+        run: |
+          apk_count="$(find src-tauri/gen/android/app/build/outputs/apk -type f -name '*.apk' | wc -l)"
+          if [ "$apk_count" -eq 0 ]; then
+            echo "No Android release APK was produced."
+            exit 1
+          fi
+          find src-tauri/gen/android/app/build/outputs/apk -type f -name '*.apk' -print
+
+      - name: Upload Android release APK
         uses: actions/upload-artifact@v4
         with:
-          name: yobei-android
-          path: src-tauri/**/build/outputs/apk/**/*.apk
-          if-no-files-found: warn
+          name: yobei-android-release
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error

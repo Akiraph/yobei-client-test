@@ -3,8 +3,9 @@
 !.gitignore
 !src/
 !src/**
-!android/
-!android/**
+!gen/
+!gen/android/
+!gen/android/**
 !capabilities/
 !capabilities/**
 !crates/
