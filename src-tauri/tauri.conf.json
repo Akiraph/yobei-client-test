@@ -36,7 +36,6 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "../extension/dist": "extension/dist",
       "../src/locales": "locales",
       "../public/site-icons.json": "site-icons.json"
     }
