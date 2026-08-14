@@ -30,7 +30,7 @@ tauri-plugin-yobei-biometric = { path = "crates/tauri-plugin-yobei-biometric" }
 rusqlite = { version = "0.31", features = ["bundled"] }
 yobei-core = { path = "../core" }
 uuid = { version = "1", features = ["v4"] }
-reqwest = { version = "0.12", default-features = false, features = ["json", "blocking", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "blocking", "rustls-tls", "system-proxy"] }
 chrono = "0.4"
 tokio = { version = "1", features = ["net", "sync", "rt", "time", "io-util", "macros"] }
 tokio-tungstenite = "0.24"

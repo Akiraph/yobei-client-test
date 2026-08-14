@@ -110,14 +110,31 @@ export default function ItemDetail(props: Props) {
                   <Show when={c()?.recoveryCodes}>
                     <div class="field-group">
                       <div class="field-label">{t('detail.recoveryCodes')}</div>
-                      <FogField value={c()!.recoveryCodes!} />
+                      <div class="code-list">
+                        <For each={c()!.recoveryCodes!.split(/\r?\n/).filter(Boolean)}>
+                          {(code) => (
+                            <div class="field-value">
+                              <span class="field-text">{code}</span>
+                              <CopyButton value={() => code} />
+                            </div>
+                          )}
+                        </For>
+                      </div>
                     </div>
                   </Show>
 
                   <Show when={(c()?.passkeys?.length ?? 0) > 0}>
                     <div class="field-group">
                       <div class="field-label">{t('detail.passkeys')}</div>
-                      <FogField value={c()!.passkeys!.join('\n')} />
+                      <div class="passkey-list">
+                        <For each={c()!.passkeys!}>
+                          {(pk) => (
+                            <div class="passkey-row">
+                              <span class="passkey-text">{pk}</span>
+                            </div>
+                          )}
+                        </For>
+                      </div>
                     </div>
                   </Show>
                 </div>

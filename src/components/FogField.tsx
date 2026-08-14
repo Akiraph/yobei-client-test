@@ -12,14 +12,14 @@ export default function FogField(props: Props) {
   return (
     <div class="fog-field">
       <span
-        class={`fog-text font-mono${revealed() ? ' revealed' : ''}`}
+        class="fog-text font-mono"
         onClick={() => setRevealed(!revealed())}
         title={revealed() ? t('fog.hide') : t('fog.show')}
         role="button"
         tabindex="0"
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setRevealed(!revealed())}
       >
-        {props.value}
+        {revealed() ? props.value : '••••••'}
       </span>
       <CopyButton value={() => props.value} />
       <Show when={!revealed()}>

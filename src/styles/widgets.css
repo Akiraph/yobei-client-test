@@ -352,19 +352,43 @@
   padding-right: 44px;
 }
 
-.editor-secret-area .icon-btn {
-  top: 12px;
-  transform: none;
+.code-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.editor-secret-area .fog-textarea {
-  padding-right: 44px;
+.code-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.secret-area-hidden {
-  filter: blur(4px);
-  caret-color: var(--fog-700);
-  user-select: none;
+.code-row .fog-input { flex: 1; }
+
+.passkey-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.passkey-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  background: var(--fog-100);
+}
+
+.passkey-text {
+  flex: 1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--fog-700);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fog-textarea {

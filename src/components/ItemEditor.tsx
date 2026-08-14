@@ -1,6 +1,6 @@
-import { createSignal, Show } from 'solid-js';
+import { createSignal, For, Show } from 'solid-js';
 import { saveItem } from '../lib/store';
-import { IconBack, IconEye, IconEyeOff } from './Icon';
+import { IconBack, IconEye, IconEyeOff, IconTrash } from './Icon';
 import { notifyError } from '../lib/notify';
 import { errorMessage } from '../lib/errors';
 import type { ItemType, VaultItem } from '../lib/types';
@@ -22,13 +22,11 @@ export default function ItemEditor(props: Props) {
   const [username, setUsername] = createSignal(src()?.username ?? '');
   const [password, setPassword] = createSignal(src()?.password ?? '');
   const [totp, setTotp] = createSignal(src()?.totp ?? '');
-  const [recoveryCodes, setRecoveryCodes] = createSignal(src()?.recoveryCodes ?? '');
-  const [passkeys, setPasskeys] = createSignal((src()?.passkeys ?? []).join('\n'));
+  const [recoveryCodes, setRecoveryCodes] = createSignal<string[]>((src()?.recoveryCodes ?? '').split(/\r?\n/).filter(Boolean));
+  const [passkeys, setPasskeys] = createSignal<string[]>(src()?.passkeys ?? []);
   const [notes, setNotes] = createSignal(src()?.notes ?? '');
   const [showPw, setShowPw] = createSignal(false);
   const [showTotp, setShowTotp] = createSignal(false);
-  const [showRecoveryCodes, setShowRecoveryCodes] = createSignal(false);
-  const [showPasskeys, setShowPasskeys] = createSignal(false);
   const [saving, setSaving] = createSignal(false);
 
   async function doSave() {
@@ -41,8 +39,8 @@ export default function ItemEditor(props: Props) {
       && !username().trim()
       && !password()
       && !totp().trim()
-      && !recoveryCodes().trim()
-      && !passkeys().trim()) {
+      && recoveryCodes().length === 0
+      && passkeys().length === 0) {
       notifyError(t('editor.loginRequired'));
       return;
     }
@@ -56,8 +54,8 @@ export default function ItemEditor(props: Props) {
           username: username().trim() || undefined,
           password: password() || undefined,
           totp: totp().trim() || undefined,
-          recoveryCodes: recoveryCodes().trim() || undefined,
-          passkeys: passkeys().split(/\r?\n/).map((value) => value.trim()).filter(Boolean),
+          recoveryCodes: recoveryCodes().join('\n') || undefined,
+          passkeys: passkeys(),
           url: url().trim() || undefined,
           notes: notes() || undefined,
         },
@@ -72,6 +70,19 @@ export default function ItemEditor(props: Props) {
 
   function handleKey(e: KeyboardEvent) {
     if (e.key === 'Enter' && !saving()) doSave();
+  }
+
+  function setCode(index: number, value: string) {
+    setRecoveryCodes((codes) => codes.map((code, i) => (i === index ? value : code)));
+  }
+  function addCode() {
+    setRecoveryCodes((codes) => [...codes, '']);
+  }
+  function removeCode(index: number) {
+    setRecoveryCodes((codes) => codes.filter((_, i) => i !== index));
+  }
+  function removePasskey(index: number) {
+    setPasskeys((keys) => keys.filter((_, i) => i !== index));
   }
 
   return (
@@ -192,51 +203,40 @@ export default function ItemEditor(props: Props) {
               </div>
             </div>
             <div class="field-group">
-              <label class="field-label" for="editor-recovery-codes">{t('editor.recoveryCodes')}</label>
-              <div class="editor-pw editor-secret-area">
-                <textarea
-                  id="editor-recovery-codes"
-                  class="fog-input fog-textarea"
-                  classList={{ 'secret-area-hidden': !showRecoveryCodes() }}
-                  value={recoveryCodes()}
-                  onInput={(e) => setRecoveryCodes(e.currentTarget.value)}
-                  placeholder={t('editor.recoveryCodesPlaceholder')}
-                  spellcheck={false}
-                />
-                <button
-                  class="icon-btn"
-                  onClick={() => setShowRecoveryCodes(!showRecoveryCodes())}
-                  title={showRecoveryCodes() ? t('editor.hideRecoveryCodes') : t('editor.showRecoveryCodes')}
-                  aria-label={showRecoveryCodes() ? t('editor.hideRecoveryCodes') : t('editor.showRecoveryCodes')}
-                >
-                  <Show when={showRecoveryCodes()} fallback={<IconEye size={15} />}>
-                    <IconEyeOff size={15} />
-                  </Show>
-                </button>
+              <label class="field-label">{t('editor.recoveryCodes')}</label>
+              <div class="code-list">
+                <For each={recoveryCodes()}>
+                  {(code, i) => (
+                    <div class="code-row">
+                      <input
+                        class="fog-input"
+                        value={code}
+                        onInput={(e) => setCode(i(), e.currentTarget.value)}
+                        placeholder={t('editor.recoveryCodesPlaceholder')}
+                        spellcheck={false}
+                      />
+                      <button class="icon-btn" onClick={() => removeCode(i())} title={t('common.delete')} aria-label={t('common.delete')}>
+                        <IconTrash size={14} />
+                      </button>
+                    </div>
+                  )}
+                </For>
+                <button class="btn btn-ghost" onClick={addCode}>{t('common.add')}</button>
               </div>
             </div>
             <div class="field-group">
-              <label class="field-label" for="editor-passkeys">{t('editor.passkeys')}</label>
-              <div class="editor-pw editor-secret-area">
-                <textarea
-                  id="editor-passkeys"
-                  class="fog-input fog-textarea"
-                  classList={{ 'secret-area-hidden': !showPasskeys() }}
-                  value={passkeys()}
-                  onInput={(e) => setPasskeys(e.currentTarget.value)}
-                  placeholder={t('editor.passkeysPlaceholder')}
-                  spellcheck={false}
-                />
-                <button
-                  class="icon-btn"
-                  onClick={() => setShowPasskeys(!showPasskeys())}
-                  title={showPasskeys() ? t('editor.hidePasskeys') : t('editor.showPasskeys')}
-                  aria-label={showPasskeys() ? t('editor.hidePasskeys') : t('editor.showPasskeys')}
-                >
-                  <Show when={showPasskeys()} fallback={<IconEye size={15} />}>
-                    <IconEyeOff size={15} />
-                  </Show>
-                </button>
+              <label class="field-label">{t('editor.passkeys')}</label>
+              <div class="passkey-list">
+                <For each={passkeys()}>
+                  {(pk, i) => (
+                    <div class="passkey-row">
+                      <span class="passkey-text">{pk}</span>
+                      <button class="icon-btn danger" onClick={() => removePasskey(i())} title={t('common.delete')} aria-label={t('common.delete')}>
+                        <IconTrash size={14} />
+                      </button>
+                    </div>
+                  )}
+                </For>
               </div>
             </div>
           </Show>
