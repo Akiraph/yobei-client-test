@@ -7,6 +7,7 @@ plugins {
 android {
     namespace = "com.akiraph.yobei"
     compileSdk = 36
+    ndkVersion = "29.0.14206865"
 
     defaultConfig {
         applicationId = "com.akiraph.yobei"
