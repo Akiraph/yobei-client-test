@@ -48,8 +48,8 @@ windows = { version = "0.58", features = ["Win32_Foundation", "Win32_Security_Cr
 winreg = "0.52"
 
 [profile.release]
-opt-level = "s"
-lto = "thin"
+opt-level = "z"
+lto = true
 codegen-units = 1
 panic = "abort"
-strip = "symbols"
+strip = true
