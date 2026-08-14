@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.mozilla.rust-android-gradle")
+    id("org.mozilla.rust-android-gradle.rust-android")
 }
 
 android {
