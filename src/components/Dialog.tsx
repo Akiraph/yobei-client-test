@@ -3,6 +3,7 @@ import { Portal } from 'solid-js/web';
 import { IconX } from './Icon';
 import { t } from '../lib/i18n';
 import { isDesktop } from '../lib/window';
+import Backdrop from '../shared/ui/Backdrop';
 
 interface Props {
   open: boolean;
@@ -48,7 +49,7 @@ export default function Dialog(props: Props) {
     <Show when={props.open}>
       <Portal>
         <div class="dialog-root" classList={{ 'dialog-with-titlebar': isDesktop() }} role="presentation">
-          <div class="dialog-overlay" aria-hidden="true" onPointerDown={() => props.onClose?.()} />
+          <Backdrop class="dialog-overlay" onPointerDown={() => props.onClose?.()} />
           <div ref={panel} class="dialog-panel" role="dialog" aria-modal="true" aria-labelledby={props.title ? 'dialog-title' : undefined} tabindex="-1">
           <Show when={props.title}>
             <div class="dialog-head">

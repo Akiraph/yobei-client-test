@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createSignal, For, onCleanup, onMount, Show } from 'solid-js';
 import {
   checkBrowsers,
   extensionClearPaired,
@@ -21,24 +21,29 @@ export default function ExtensionSection() {
   const [status, setStatus] = createSignal<PairingStatus | null>(null);
   const [busy, setBusy] = createSignal(false);
   let browserRefreshTimer: number | undefined;
+  let active = true;
 
   async function refreshBrowsers(attempt = 0) {
     try {
-      setBrowserState(await checkBrowsers());
+      const browsers = await checkBrowsers();
+      if (active) setBrowserState(browsers);
     } catch {
-      setBrowserState([]);
+      if (active) setBrowserState([]);
     }
-    if (attempt < 5) {
+    if (active && attempt < 5) {
       browserRefreshTimer = window.setTimeout(() => void refreshBrowsers(attempt + 1), 250);
     }
   }
 
-  createEffect(() => {
+  onMount(() => {
     void refreshBrowsers();
-    extensionPairingStatus().then(setStatus).catch(() => setStatus(null));
+    extensionPairingStatus()
+      .then((value) => { if (active) setStatus(value); })
+      .catch(() => { if (active) setStatus(null); });
   });
 
   onCleanup(() => {
+    active = false;
     if (browserRefreshTimer) window.clearTimeout(browserRefreshTimer);
   });
 

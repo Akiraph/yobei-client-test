@@ -1,4 +1,4 @@
-import { createSignal, createEffect, onCleanup, onMount, Show } from 'solid-js';
+import { createSignal, onCleanup, onMount, Show } from 'solid-js';
 import { unlock, recordPasswordEntry, biometricConfirmBlocked } from '../lib/store';
 import { unlockVault, unlockWithBiometric, biometricAvailable, isBiometricEnabled } from '../lib/ipc';
 import { IconFingerprint } from '../components/Icon';
@@ -15,28 +15,26 @@ export default function Unlock() {
   const [biometricReady, setBiometricReady] = createSignal(false);
   const [biometricBusy, setBiometricBusy] = createSignal(false);
   let autoBiometricAttempted = false;
+  let transitionTimer: ReturnType<typeof setTimeout> | undefined;
 
-  createEffect(() => {
+  onMount(() => {
     let alive = true;
     onCleanup(() => { alive = false; });
     if (biometricConfirmBlocked()) return;
     Promise.all([biometricAvailable(), isBiometricEnabled()])
       .then(([avail, enabled]) => {
-        if (alive) setBiometricReady(avail && enabled);
-      })
-      .catch(() => {});
-  });
-
-  onMount(() => {
-    if (biometricConfirmBlocked()) return;
-    Promise.all([biometricAvailable(), isBiometricEnabled()])
-      .then(([available, enabled]) => {
-        if (available && enabled && !autoBiometricAttempted) {
+        if (!alive) return;
+        setBiometricReady(avail && enabled);
+        if (avail && enabled && !autoBiometricAttempted) {
           autoBiometricAttempted = true;
           void doBiometricUnlock();
         }
       })
       .catch(() => {});
+  });
+
+  onCleanup(() => {
+    if (transitionTimer) clearTimeout(transitionTimer);
   });
 
   async function doUnlock() {
@@ -51,7 +49,7 @@ export default function Unlock() {
       recordPasswordEntry();
       setStatus('ok');
       setRevealed(true);
-      setTimeout(() => void unlock(), 700);
+      transitionTimer = setTimeout(() => void unlock(), 700);
     } catch (error) {
       setStatus('error');
       const message = errorMessage(error, 'invalid_password');
@@ -68,7 +66,7 @@ export default function Unlock() {
       await unlockWithBiometric(t('unlock.biometricUnlock'));
       setStatus('ok');
       setRevealed(true);
-      setTimeout(() => void unlock(), 700);
+      transitionTimer = setTimeout(() => void unlock(), 700);
     } catch (error) {
       setStatus('error');
       const message = errorMessage(error, 'biometric_unavailable');

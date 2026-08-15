@@ -1,4 +1,4 @@
-import { createSignal, Show } from 'solid-js';
+import { createSignal, onCleanup, Show } from 'solid-js';
 import { IconCopy, IconCheck } from './Icon';
 import { copyText } from '../lib/clipboard';
 import { t } from '../lib/i18n';
@@ -12,6 +12,11 @@ interface Props {
 
 export default function CopyButton(props: Props) {
   const [copied, setCopied] = createSignal(false);
+  let resetTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => {
+    if (resetTimer) clearTimeout(resetTimer);
+  });
 
   async function handleCopy(e: MouseEvent) {
     e.stopPropagation();
@@ -19,9 +24,11 @@ export default function CopyButton(props: Props) {
       await copyText(props.value());
     } catch (error) {
       notifyError(errorMessage(error));
+      return;
     }
     setCopied(true);
-    setTimeout(() => setCopied(false), 1200);
+    if (resetTimer) clearTimeout(resetTimer);
+    resetTimer = setTimeout(() => setCopied(false), 1200);
   }
 
   return (

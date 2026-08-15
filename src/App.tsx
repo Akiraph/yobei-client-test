@@ -1,5 +1,5 @@
-import { createSignal, onMount, Show } from 'solid-js';
-import { state, applyTheme, setPhase, initVaultLockListener } from './lib/store';
+import { createSignal, onCleanup, onMount, Show } from 'solid-js';
+import { state, applyTheme, setPhase, initVaultLockListener, startSyncPolling } from './lib/store';
 import { isDesktop } from './lib/window';
 import { isInitialized, inTauri } from './lib/ipc';
 import { t } from './lib/i18n';
@@ -10,7 +10,7 @@ import Dialog from './components/Dialog';
 import Titlebar from './components/Titlebar';
 import Setup from './routes/Setup';
 import Unlock from './routes/Unlock';
-import Vault from './routes/Vault';
+import Vault from './pages/VaultPage';
 
 export default function App() {
   const [startupFailed, setStartupFailed] = createSignal(false);
@@ -30,7 +30,12 @@ export default function App() {
 
   onMount(() => {
     applyTheme(state.theme);
-    initVaultLockListener();
+    const stopLockListener = initVaultLockListener();
+    const stopSyncPolling = startSyncPolling();
+    onCleanup(() => {
+      stopLockListener();
+      stopSyncPolling();
+    });
     void syncTrayLocale();
     void initialize();
   });

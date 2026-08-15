@@ -286,9 +286,20 @@ export function lock() {
   animateLock();
 }
 
-export function initVaultLockListener(): void {
-  if (!inTauri) return;
-  listen('vault-locked', animateLock).catch(() => {});
+export function initVaultLockListener(): () => void {
+  if (!inTauri) return () => {};
+  let disposed = false;
+  let unlisten: (() => void) | undefined;
+  listen('vault-locked', animateLock)
+    .then((remove) => {
+      if (disposed) remove();
+      else unlisten = remove;
+    })
+    .catch(() => {});
+  return () => {
+    disposed = true;
+    unlisten?.();
+  };
 }
 
 async function finishUnlock() {
@@ -410,7 +421,7 @@ export async function runSync(): Promise<boolean> {
     setState('sync', 'lastError', 'sync_failed');
   } finally {
     setState('sync', 'syncing', false);
-    refreshSyncStatus();
+    void refreshSyncStatus();
   }
   return ok;
 }
@@ -419,13 +430,23 @@ export async function pairServer(serverUrl: string, setupCode: string, deviceNam
   if (!inTauri) throw new ClientError('desktop_only');
   await ipcPairDevice(serverUrl, setupCode, deviceName);
   await refreshSyncStatus();
-  runSync();
+  void runSync();
 }
 
 function syncAfterChange(): void {
   if (state.phase === 'unlocked' && state.sync.configured) {
-    runSync();
+    void runSync();
   }
 }
 
-setInterval(() => syncAfterChange(), 30_000);
+let syncTimer: number | undefined;
+
+export function startSyncPolling(): () => void {
+  if (!inTauri || syncTimer !== undefined) return () => {};
+  syncTimer = window.setInterval(syncAfterChange, 30_000);
+  return () => {
+    if (syncTimer === undefined) return;
+    window.clearInterval(syncTimer);
+    syncTimer = undefined;
+  };
+}

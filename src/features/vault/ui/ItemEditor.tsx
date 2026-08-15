@@ -1,15 +1,15 @@
 import { createSignal, For, Show } from 'solid-js';
-import { saveItem } from '../lib/store';
-import { IconBack, IconEye, IconEyeOff, IconTrash } from './Icon';
-import { notifyError } from '../lib/notify';
-import { errorMessage } from '../lib/errors';
-import type { ItemType, VaultItem } from '../lib/types';
-import { t } from '../lib/i18n';
+import { IconBack, IconEye, IconEyeOff, IconTrash } from '../../../components/Icon';
+import { notifyError } from '../../../lib/notify';
+import { errorMessage } from '../../../lib/errors';
+import type { ItemType, VaultItem } from '../../../lib/types';
+import { t } from '../../../lib/i18n';
+import type { VaultFeature } from '../model';
 
 interface Props {
+  feature: VaultFeature;
   item?: VaultItem | null;
   onClose: () => void;
-  onSaved?: (id: string) => void;
 }
 
 export default function ItemEditor(props: Props) {
@@ -46,7 +46,7 @@ export default function ItemEditor(props: Props) {
     }
     setSaving(true);
     try {
-      const id = await saveItem({
+      await props.feature.saveItem({
         id: src()?.id,
         type: type(),
         data: {
@@ -60,7 +60,6 @@ export default function ItemEditor(props: Props) {
           notes: notes() || undefined,
         },
       });
-      props.onSaved?.(id);
       props.onClose();
     } catch (error) {
       setSaving(false);

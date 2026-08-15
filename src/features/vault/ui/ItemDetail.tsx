@@ -1,24 +1,25 @@
 import { Show, For, createSignal, createEffect, onCleanup } from 'solid-js';
-import { selectedItem, selectedItemContent } from '../lib/store';
-import { computeTotp } from '../lib/ipc';
-import { copyText } from '../lib/clipboard';
-import { showDialog, hideDialog } from '../lib/dialog';
-import { errorMessage } from '../lib/errors';
-import FogField from './FogField';
-import CopyButton from './CopyButton';
-import { IconBack, IconNote, IconPencil, IconTrash } from './Icon';
-import SiteIcon from './SiteIcon';
-import { t } from '../lib/i18n';
+import { computeTotp } from '../../../lib/ipc';
+import { copyText } from '../../../lib/clipboard';
+import { showDialog, hideDialog } from '../../../lib/dialog';
+import { errorMessage } from '../../../lib/errors';
+import FogField from '../../../components/FogField';
+import CopyButton from '../../../components/CopyButton';
+import { IconBack, IconNote, IconPencil, IconTrash } from '../../../components/Icon';
+import SiteIcon from '../../../components/SiteIcon';
+import { t } from '../../../lib/i18n';
+import type { VaultFeature } from '../model';
 
 interface Props {
+  feature: VaultFeature;
   onBack?: () => void;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
 
 export default function ItemDetail(props: Props) {
-  const item = selectedItem;
-  const content = selectedItemContent;
+  const item = props.feature.selectedItem;
+  const content = props.feature.selectedItemContent;
 
   function confirmDelete() {
     const it = item();
@@ -29,7 +30,7 @@ export default function ItemDetail(props: Props) {
         <p class="dialog-desc">{t('dialog.deleteItem.body', { name: it.title })}</p>
         <div class="dialog-actions">
           <button class="btn btn-ghost" onClick={hideDialog}>{t('common.cancel')}</button>
-          <button class="btn btn-danger" onClick={async () => {
+          <button class="btn btn-danger" onClick={() => {
             hideDialog();
             props.onDelete?.(it.id);
           }}>
@@ -197,6 +198,7 @@ function TotpDisplay(props: { secret: string }) {
   const [copied, setCopied] = createSignal(false);
   const [offset, setOffset] = createSignal(0);
   const [error, setError] = createSignal('');
+  let copiedTimer: ReturnType<typeof setTimeout> | undefined;
 
   const R = 10;
   const CIRC = 2 * Math.PI * R;
@@ -238,10 +240,19 @@ function TotpDisplay(props: { secret: string }) {
     });
   });
 
-  function copy() {
-    copyText(code()).catch(() => {});
+  onCleanup(() => {
+    if (copiedTimer) clearTimeout(copiedTimer);
+  });
+
+  async function copy() {
+    try {
+      await copyText(code());
+    } catch {
+      return;
+    }
     setCopied(true);
-    setTimeout(() => setCopied(false), 1200);
+    if (copiedTimer) clearTimeout(copiedTimer);
+    copiedTimer = setTimeout(() => setCopied(false), 1200);
   }
 
   return (
@@ -250,7 +261,11 @@ function TotpDisplay(props: { secret: string }) {
       onClick={copy}
       role="button"
       tabindex="0"
-      onKeyDown={(e) => e.key === 'Enter' && copy()}
+      onKeyDown={(e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        void copy();
+      }}
       title={copied() ? t('detail.totpCopied') : t('detail.clickToCopy')}
       aria-label={`${t('detail.totp')} ${displayCode()}`}
     >

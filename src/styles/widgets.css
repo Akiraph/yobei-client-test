@@ -606,8 +606,6 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: rgba(37, 40, 64, 0.22);
-  backdrop-filter: blur(2px);
   animation: fog-fade var(--dur-med) var(--ease-fog) both;
 }
 

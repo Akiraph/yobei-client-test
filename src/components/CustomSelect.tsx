@@ -1,4 +1,4 @@
-import { For, Show, createSignal, onCleanup, createEffect } from 'solid-js';
+import { For, Show, createSignal, onCleanup, onMount } from 'solid-js';
 import { IconChevronDown } from './Icon';
 
 interface Opt { v: number | string; label: string }
@@ -31,20 +31,21 @@ export function CustomSelect(p: Props) {
       close();
     }
   };
-  createEffect(() => {
-    if (open()) document.addEventListener('click', onDocClick);
-    else document.removeEventListener('click', onDocClick);
+  onMount(() => {
+    document.addEventListener('click', onDocClick);
+    onCleanup(() => document.removeEventListener('click', onDocClick));
   });
-  onCleanup(() => document.removeEventListener('click', onDocClick));
 
   const selectedIdx = () => p.options.findIndex((o) => o.v === p.value());
 
   return (
-    <div class="custom-select" classList={{ [p.class ?? '']: !!p.class }}>
+    <div class={`custom-select${p.class ? ` ${p.class}` : ''}`}>
       <button
         ref={btnRef}
+        type="button"
         class="custom-select-trigger"
         onClick={toggle}
+        onKeyDown={(event) => event.key === 'Escape' && close()}
         aria-label={p.ariaLabel}
         aria-expanded={open()}
       >
@@ -56,8 +57,10 @@ export function CustomSelect(p: Props) {
           <For each={p.options}>
             {(o, i) => (
               <button
+                type="button"
                 class="custom-select-option"
                 classList={{ selected: i() === selectedIdx() }}
+                onKeyDown={(event) => event.key === 'Escape' && close()}
                 onClick={() => select(o.v)}
               >
                 {o.label}

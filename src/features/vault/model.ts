@@ -1,0 +1,194 @@
+import { createEffect, createSignal, onCleanup, onMount } from 'solid-js';
+import {
+  accountMatches,
+  deleteItem,
+  itemContentFor,
+  lock,
+  runSync,
+  saveAccountCredential,
+  saveItem,
+  selectedItem,
+  selectedItemContent,
+  selectItem,
+  setActiveNav,
+  setSearch,
+  state,
+  toggleSettings,
+  visibleItems,
+} from '../../lib/store';
+import type { ItemData, ItemType } from '../../lib/types';
+import { errorMessage } from '../../lib/errors';
+import { inTauri, markActivity } from '../../lib/ipc';
+import { notifyError } from '../../lib/notify';
+import { createMediaQuery } from '../../shared/useMediaQuery';
+
+type Pane = 'list' | 'detail';
+type EditState = { mode: 'new' } | { mode: 'edit'; id: string } | null;
+
+export interface VaultItemDraft {
+  id?: string;
+  type: ItemType;
+  data: ItemData;
+}
+
+export function createVaultFeature() {
+  const isMobile = createMediaQuery('(max-width: 859px)');
+  const [pane, setPane] = createSignal<Pane>('list');
+  const [editing, setEditing] = createSignal<EditState>(null);
+  const [sidebarOpen, setSidebarOpen] = createSignal(false);
+
+  createEffect(() => {
+    if (!isMobile()) setSidebarOpen(false);
+  });
+
+  onMount(() => {
+    const onPopState = () => {
+      if (isMobile() && pane() === 'detail') resetDetail();
+    };
+    window.addEventListener('popstate', onPopState);
+    onCleanup(() => window.removeEventListener('popstate', onPopState));
+
+    if (!inTauri) return;
+    let lastActivity = 0;
+    const ping = () => {
+      const now = Date.now();
+      if (now - lastActivity < 5000) return;
+      lastActivity = now;
+      void markActivity().catch(() => {});
+    };
+    const events: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'wheel', 'scroll'];
+    events.forEach((event) => window.addEventListener(event, ping, { passive: true }));
+    onCleanup(() => events.forEach((event) => window.removeEventListener(event, ping)));
+  });
+
+  function resetDetail() {
+    setPane('list');
+    selectItem(null);
+    setEditing(null);
+  }
+
+  function showDetail() {
+    if (pane() === 'detail') return;
+    setPane('detail');
+    if (isMobile() && history.state?.yobei !== 'detail') {
+      history.pushState({ ...(history.state ?? {}), yobei: 'detail' }, '');
+    }
+  }
+
+  function back() {
+    if (isMobile() && history.state?.yobei === 'detail') {
+      history.back();
+      return;
+    }
+    resetDetail();
+  }
+
+  function showSelectedDetail() {
+    if (isMobile()) showDetail();
+  }
+
+  function selectVaultItem(id: string) {
+    selectItem(id);
+    showSelectedDetail();
+  }
+
+  function createNew() {
+    selectItem(null);
+    setEditing({ mode: 'new' });
+    if (isMobile()) showDetail();
+  }
+
+  function edit(id: string) {
+    setEditing({ mode: 'edit', id });
+    if (isMobile()) showDetail();
+  }
+
+  async function remove(id: string) {
+    try {
+      await deleteItem(id);
+    } catch (error) {
+      notifyError(errorMessage(error));
+      return;
+    }
+    setEditing(null);
+    if (isMobile()) back();
+  }
+
+  function closeEditor() {
+    setEditing(null);
+  }
+
+  function openSidebar() {
+    setSidebarOpen(true);
+  }
+
+  function closeSidebar() {
+    setSidebarOpen(false);
+  }
+
+  function closeSettings() {
+    toggleSettings(false);
+  }
+
+  function navigate(id: string) {
+    toggleSettings(false);
+    setActiveNav(id);
+  }
+
+  function openSettings() {
+    toggleSettings(true);
+  }
+
+  function saveVaultItem(input: VaultItemDraft) {
+    return saveItem(input);
+  }
+
+  function syncNow() {
+    return runSync();
+  }
+
+  function lockVault() {
+    lock();
+  }
+
+  return {
+    isMobile,
+    items: () => state.items,
+    search: () => state.search,
+    sync: () => state.sync,
+    selectedItemId: () => state.selectedItemId,
+    activeNav: () => state.activeNav,
+    visibleItems,
+    selectedItem,
+    selectedItemContent,
+    setSearch,
+    itemContentFor,
+    accountMatches,
+    saveItem: saveVaultItem,
+    saveAccountCredential,
+    runSync: syncNow,
+    navigate,
+    openSettings,
+    lock: lockVault,
+    pane,
+    editing,
+    editingItem: () => {
+      const current = editing();
+      return current?.mode === 'edit' ? state.items.find((item) => item.id === current.id) : null;
+    },
+    sidebarOpen,
+    settingsOpen: () => state.showSettings,
+    condensing: () => state.condensing,
+    select: selectVaultItem,
+    back,
+    createNew,
+    edit,
+    remove,
+    closeEditor,
+    openSidebar,
+    closeSidebar,
+    closeSettings,
+  };
+}
+
+export type VaultFeature = ReturnType<typeof createVaultFeature>;

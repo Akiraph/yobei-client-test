@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, lazy, onMount, Show, Suspense } from 'solid-js';
+import { createEffect, createSignal, For, lazy, onCleanup, onMount, Show, Suspense } from 'solid-js';
 import { state, pairServer, refreshSyncStatus, runSync, setTheme, updateSettings } from '../lib/store';
 import type { Theme } from '../lib/types';
 import {
@@ -281,9 +281,13 @@ function BiometricSection() {
   const [password, setPassword] = createSignal('');
   const [busy, setBusy] = createSignal(false);
 
-  createEffect(() => {
-    biometricAvailable().then((value) => { setSupported(value); setProbed(true); }).catch(() => setProbed(true));
-    isBiometricEnabled().then(setEnabled).catch(() => undefined);
+  onMount(() => {
+    let active = true;
+    onCleanup(() => { active = false; });
+    biometricAvailable()
+      .then((value) => { if (active) { setSupported(value); setProbed(true); } })
+      .catch(() => { if (active) setProbed(true); });
+    isBiometricEnabled().then((value) => { if (active) setEnabled(value); }).catch(() => {});
   });
 
   async function enable() {
@@ -353,15 +357,22 @@ function SyncSection() {
   const [busy, setBusy] = createSignal(false);
   const [scanning, setScanning] = createSignal(false);
   const [devices, setDevices] = createSignal<AuthorizedDevice[]>([]);
+  let active = true;
+
+  onCleanup(() => { active = false; });
+
+  onMount(() => {
+    void refreshSyncStatus();
+  });
 
   createEffect(() => {
-    void refreshSyncStatus();
     if (state.sync.configured) void refreshDevices();
   });
 
   async function refreshDevices() {
     try {
-      setDevices(await listDevices());
+      const nextDevices = await listDevices();
+      if (active) setDevices(nextDevices);
     } catch (error) {
       notifyError(errorMessage(error, 'sync_failed'));
     }
@@ -420,9 +431,12 @@ function SyncSection() {
 
   async function sync() {
     setBusy(true);
-    const ok = await runSync();
-    notify(ok, ok ? t('settings.syncSuccess') : t('error.syncFailed'));
-    setBusy(false);
+    try {
+      const ok = await runSync();
+      notify(ok, ok ? t('settings.syncSuccess') : t('error.syncFailed'));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (

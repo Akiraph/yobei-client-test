@@ -1,4 +1,4 @@
-import { createSignal, Show, For, onMount } from 'solid-js';
+import { createSignal, onCleanup, onMount, Show, For } from 'solid-js';
 import { IconRefresh, IconX } from './Icon';
 import CopyButton from './CopyButton';
 import { generatePassword } from '../lib/ipc';
@@ -26,6 +26,8 @@ export default function Generator(props: Props) {
   const [error, setError] = createSignal('');
   const [busy, setBusy] = createSignal(false);
   let reqId = 0;
+
+  onCleanup(() => { reqId++; });
 
   function buildOpts(): PassgenOptions {
     if (mode() === 'passphrase') {

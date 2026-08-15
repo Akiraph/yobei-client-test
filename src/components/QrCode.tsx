@@ -17,12 +17,19 @@ export function QrCode(props: Props) {
   createEffect(() => {
     if (!canvas || !props.value) return;
     const target = canvas;
-    void import('qrcode').then(({ default: QRCode }) => QRCode.toCanvas(target, props.value, {
-        errorCorrectionLevel: 'M',
-        margin: 2,
-        width: 240,
-        color: { dark: '#111111', light: '#ffffff' },
-      }));
+    let active = true;
+    void import('qrcode')
+      .then(({ default: QRCode }) => {
+        if (!active) return;
+        return QRCode.toCanvas(target, props.value, {
+          errorCorrectionLevel: 'M',
+          margin: 2,
+          width: 240,
+          color: { dark: '#111111', light: '#ffffff' },
+        });
+      })
+      .catch(() => {});
+    onCleanup(() => { active = false; });
   });
 
   onCleanup(() => {

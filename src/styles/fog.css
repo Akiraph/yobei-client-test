@@ -32,6 +32,12 @@
   --surface:        rgba(251, 252, 254, 0.6);
   --surface-hover:  rgba(251, 252, 254, 0.82);
   --surface-active: rgba(240, 245, 251, 0.9);
+  --overlay-bg:     rgba(37, 40, 64, 0.22);
+  --overlay-blur:   2px;
+  --generator-overlay-bg:   rgba(37, 40, 64, 0.18);
+  --generator-overlay-blur: 4px;
+  --drawer-bg:      rgba(255, 255, 255, 0.9);
+  --drawer-blur:    24px;
 
   --shadow-xs:   0 1px 2px rgba(35, 47, 73, 0.04);
   --shadow-sm:   0 2px 8px rgba(35, 47, 73, 0.05);
@@ -85,6 +91,7 @@
   --surface:        rgba(24, 34, 59, 0.6);
   --surface-hover:  rgba(30, 42, 71, 0.8);
   --surface-active: rgba(21, 30, 48, 0.9);
+  --drawer-bg:      rgba(26, 29, 51, 0.92);
 
   --shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.2);
   --shadow-sm:   0 2px 8px rgba(0, 0, 0, 0.22);
@@ -123,6 +130,7 @@
     --surface:        rgba(24, 34, 59, 0.6);
     --surface-hover:  rgba(30, 42, 71, 0.8);
     --surface-active: rgba(21, 30, 48, 0.9);
+    --drawer-bg:      rgba(26, 29, 51, 0.92);
 
     --shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.2);
     --shadow-sm:   0 2px 8px rgba(0, 0, 0, 0.22);

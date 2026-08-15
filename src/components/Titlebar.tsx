@@ -1,4 +1,4 @@
-import { Show, createSignal, onMount } from 'solid-js';
+import { Show, createSignal, onCleanup, onMount } from 'solid-js';
 import { winMinimize, winToggleMaximize, winClose, winIsMaximized, isMac } from '../lib/window';
 import { t } from '../lib/i18n';
 import { IconMaximize, IconMinus, IconRestore, IconX } from './Icon';
@@ -10,13 +10,21 @@ interface Props {
 export default function Titlebar(props: Props) {
   const [maximized, setMaximized] = createSignal(false);
 
-  onMount(async () => {
-    setMaximized(await winIsMaximized());
+  onMount(() => {
+    let active = true;
+    onCleanup(() => { active = false; });
+    void winIsMaximized()
+      .then((value) => { if (active) setMaximized(value); })
+      .catch(() => {});
   });
 
   async function toggleMax() {
-    await winToggleMaximize();
-    setMaximized(await winIsMaximized());
+    try {
+      await winToggleMaximize();
+      setMaximized(await winIsMaximized());
+    } catch {
+      // Window controls can be unavailable while the native window is closing.
+    }
   }
 
   return (
@@ -26,7 +34,7 @@ export default function Titlebar(props: Props) {
       data-tauri-drag-region
       onDblClick={(e) => {
         if ((e.target as HTMLElement).closest('.tb-btn')) return;
-        winToggleMaximize();
+        void winToggleMaximize().catch(() => {});
       }}
     >
       <Show when={isMac()}>

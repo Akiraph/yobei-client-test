@@ -1,19 +1,19 @@
-import { For, Show, createSignal, createEffect, onCleanup } from 'solid-js';
-import { state, setSearch, selectItem, visibleItems, saveItem, accountMatches, itemContentFor, saveAccountCredential, runSync } from '../lib/store';
-import { computeTotp } from '../lib/ipc';
-import { copyText } from '../lib/clipboard';
-import { relativeTime } from '../lib/format';
-import { notifyError, notifyOk } from '../lib/notify';
-import { errorMessage } from '../lib/errors';
-import { IconSearch, IconPlus, IconScan, IconMenu } from './Icon';
-import type { VaultItem } from '../lib/types';
-import { t } from '../lib/i18n';
-import { QrScanner } from './QrScanner';
-import { hideDialog, showDialog } from '../lib/dialog';
-import SiteIcon from './SiteIcon';
+import { For, Show, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
+import { computeTotp } from '../../../lib/ipc';
+import { copyText } from '../../../lib/clipboard';
+import { relativeTime } from '../../../lib/format';
+import { notifyError, notifyOk } from '../../../lib/notify';
+import { errorMessage } from '../../../lib/errors';
+import { IconSearch, IconPlus, IconScan, IconMenu, IconRefresh } from '../../../components/Icon';
+import type { VaultItem } from '../../../lib/types';
+import { t } from '../../../lib/i18n';
+import { QrScanner } from '../../../components/QrScanner';
+import { hideDialog, showDialog } from '../../../lib/dialog';
+import SiteIcon from '../../../components/SiteIcon';
+import type { VaultFeature } from '../model';
 
 interface Props {
-  onSelect?: () => void;
+  feature: VaultFeature;
   onNew?: () => void;
   onMenu?: () => void;
 }
@@ -21,6 +21,8 @@ interface Props {
 export default function ItemList(props: Props) {
   const [showNewMenu, setShowNewMenu] = createSignal(false);
   const [refreshing, setRefreshing] = createSignal(false);
+  const [pullDistance, setPullDistance] = createSignal(0);
+  const [pullDragging, setPullDragging] = createSignal(false);
   let menuRef: HTMLDivElement | undefined;
   let btnRef: HTMLButtonElement | undefined;
   let listRef: HTMLDivElement | undefined;
@@ -33,47 +35,70 @@ export default function ItemList(props: Props) {
     }
   };
 
-  createEffect(() => {
-    if (showNewMenu()) {
-      document.addEventListener('click', onDocClick);
-    } else {
-      document.removeEventListener('click', onDocClick);
-    }
+  onMount(() => {
+    document.addEventListener('click', onDocClick);
+    onCleanup(() => document.removeEventListener('click', onDocClick));
   });
-  onCleanup(() => document.removeEventListener('click', onDocClick));
+
+  const filteredItems = createMemo(() => props.feature.visibleItems());
 
   async function doRefresh() {
     if (refreshing()) return;
     setRefreshing(true);
+    setPullDistance(56);
     try {
-      await runSync();
+      await Promise.all([
+        props.feature.runSync(),
+        new Promise<void>((resolve) => window.setTimeout(resolve, 240)),
+      ]);
     } finally {
       setRefreshing(false);
+      setPullDistance(0);
     }
   }
 
   function onListTouchStart(event: TouchEvent) {
-    if (listRef && listRef.scrollTop <= 0) {
-      pullStartY = event.touches[0].clientY;
+    if (refreshing()) return;
+    const touch = event.touches[0];
+    if (touch && listRef && listRef.scrollTop <= 0) {
+      pullStartY = touch.clientY;
       pulling = true;
+      setPullDragging(true);
+      setPullDistance(0);
     } else {
       pulling = false;
+      setPullDragging(false);
     }
   }
 
   function onListTouchMove(event: TouchEvent) {
-    if (!pulling) return;
-    if (event.touches[0].clientY - pullStartY > 80) {
+    if (!pulling || refreshing()) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    const delta = touch.clientY - pullStartY;
+    if (delta <= 0) {
       pulling = false;
-      void doRefresh();
+      setPullDragging(false);
+      setPullDistance(0);
+      return;
     }
+    if (event.cancelable) event.preventDefault();
+    setPullDistance(Math.min(96, delta * 0.5));
   }
 
   function onListTouchEnd() {
+    if (pulling && pullDistance() >= 72) {
+      pulling = false;
+      setPullDragging(false);
+      void doRefresh();
+      return;
+    }
     pulling = false;
+    setPullDragging(false);
+    setPullDistance(0);
   }
 
-  async function handleScanAndAdd() {
+  function handleScanAndAdd() {
     setShowNewMenu(false);
     showDialog(
       t('list.scan'),
@@ -96,15 +121,17 @@ export default function ItemList(props: Props) {
         totp: parsed.secret,
         ...(parsed.account ? { username: parsed.account } : {}),
       };
-      const candidates: VaultItem[] = [];
-      for (const item of state.items) {
-        if (item.type !== 'login') continue;
-        const data = await itemContentFor(item.id);
-        if (accountMatches(item, data, parsed.account, parsed.service, parsed.title)) candidates.push(item);
-      }
+      const candidates = (await Promise.all(
+        props.feature.items()
+          .filter((item) => item.type === 'login')
+          .map(async (item) => {
+            const data = await props.feature.itemContentFor(item.id);
+            return props.feature.accountMatches(item, data, parsed.account, parsed.service, parsed.title) ? item : null;
+          }),
+      )).filter((item): item is VaultItem => item !== null);
       if (candidates.length === 0) {
         try {
-          await saveItem({ type: 'login', data: { title: parsed.title, totp: parsed.secret, username: parsed.account } });
+          await props.feature.saveItem({ type: 'login', data: { title: parsed.title, totp: parsed.secret, username: parsed.account } });
           notifyOk(t('list.totpAdded', { title: parsed.title }));
         } catch (error) {
           notifyError(errorMessage(error, 'operation_failed'));
@@ -112,10 +139,10 @@ export default function ItemList(props: Props) {
         return;
       }
       if (candidates.length === 1) {
-        await saveAccountCredential(candidates[0], credentialPatch);
+        await props.feature.saveAccountCredential(candidates[0], credentialPatch);
         notifyOk(t('list.totpUpdated', { title: candidates[0].title }));
       } else {
-        showCredentialChoice(parsed, candidates);
+        showCredentialChoice(props.feature, parsed, candidates);
       }
     } catch (error) {
       notifyError(errorMessage(error, 'operation_failed'));
@@ -128,8 +155,7 @@ export default function ItemList(props: Props) {
   }
 
   function choose(id: string) {
-    selectItem(id);
-    props.onSelect?.();
+    props.feature.select(id);
   }
 
   return (
@@ -145,8 +171,8 @@ export default function ItemList(props: Props) {
           <input
             class="fog-input"
             placeholder={t('list.searchPlaceholder')}
-            value={state.search}
-            onInput={(e) => setSearch(e.currentTarget.value)}
+            value={props.feature.search()}
+            onInput={(e) => props.feature.setSearch(e.currentTarget.value)}
             aria-label={t('list.searchVault')}
           />
         </div>
@@ -172,6 +198,7 @@ export default function ItemList(props: Props) {
 
       <div
         class="item-list"
+        classList={{ 'is-pull-dragging': pullDragging() }}
         ref={listRef}
         role="listbox"
         aria-label={t('nav.vault')}
@@ -180,22 +207,35 @@ export default function ItemList(props: Props) {
         onTouchEnd={onListTouchEnd}
         onTouchCancel={onListTouchEnd}
       >
-        <Show when={refreshing()}>
-          <div class="pull-indicator">{t('nav.syncing')}</div>
-        </Show>
-        <For each={visibleItems()} fallback={
-          <div class="list-empty">
-            <p>{t('list.empty')}</p>
-          </div>
-        }>
-          {(item) => (
-            <VaultRow
-              item={item}
-              selected={state.selectedItemId === item.id}
-              onClick={() => choose(item.id)}
-            />
-          )}
-        </For>
+        <div
+          class="pull-indicator"
+          classList={{ visible: pullDistance() > 0 || refreshing(), ready: pullDistance() >= 72, refreshing: refreshing() }}
+          style={`--pull-distance: ${pullDistance()}px;`}
+          aria-hidden="true"
+        >
+          <span
+            class="pull-indicator-icon"
+            style={`transform: rotate(${Math.min(180, pullDistance() / 72 * 180)}deg);`}
+          >
+            <IconRefresh size={15} />
+          </span>
+          <span>{refreshing() ? t('nav.syncing') : t('nav.syncNow')}</span>
+        </div>
+        <div class="item-list-content" style={`--pull-distance: ${pullDistance()}px;`}>
+          <For each={filteredItems()} fallback={
+            <div class="list-empty">
+              <p>{t('list.empty')}</p>
+            </div>
+          }>
+            {(item) => (
+              <VaultRow
+                item={item}
+                selected={props.feature.selectedItemId() === item.id}
+                onClick={() => choose(item.id)}
+              />
+            )}
+          </For>
+        </div>
       </div>
     </div>
   );
@@ -217,8 +257,8 @@ function parseOtpauthUri(uri: string): { title: string; secret: string; account?
   }
 }
 
-function showCredentialChoice(parsed: { title: string; secret: string; account?: string; service?: string }, candidates: VaultItem[]) {
-  const choices = candidates.length > 0 ? candidates : state.items.filter((item) => item.type === 'login');
+function showCredentialChoice(feature: VaultFeature, parsed: { title: string; secret: string; account?: string; service?: string }, candidates: VaultItem[]) {
+  const choices = candidates.length > 0 ? candidates : feature.items().filter((item) => item.type === 'login');
   showDialog(
     t('list.chooseAccountTitle'),
     <div class="credential-choice-list">
@@ -228,7 +268,7 @@ function showCredentialChoice(parsed: { title: string; secret: string; account?:
           <button class="credential-choice" onClick={async () => {
             hideDialog();
             try {
-              await saveAccountCredential(item, {
+              await feature.saveAccountCredential(item, {
                 totp: parsed.secret,
                 ...(parsed.account ? { username: parsed.account } : {}),
               });
@@ -245,7 +285,7 @@ function showCredentialChoice(parsed: { title: string; secret: string; account?:
       <button class="btn btn-primary credential-choice-new" onClick={async () => {
         hideDialog();
         try {
-          await saveItem({ type: 'login', data: { title: parsed.title, totp: parsed.secret, username: parsed.account } });
+          await feature.saveItem({ type: 'login', data: { title: parsed.title, totp: parsed.secret, username: parsed.account } });
           notifyOk(t('list.totpAdded', { title: parsed.title }));
         } catch (error) {
           notifyError(errorMessage(error, 'operation_failed'));
@@ -259,6 +299,11 @@ function showCredentialChoice(parsed: { title: string; secret: string; account?:
 
 function VaultRow(p: { item: VaultItem; selected: boolean; onClick: () => void }) {
   const [copied, setCopied] = createSignal(false);
+  let resetTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => {
+    if (resetTimer) clearTimeout(resetTimer);
+  });
 
   async function copyTotp(e: Event) {
     e.stopPropagation();
@@ -270,7 +315,8 @@ function VaultRow(p: { item: VaultItem; selected: boolean; onClick: () => void }
       return;
     }
     setCopied(true);
-    setTimeout(() => setCopied(false), 1200);
+    if (resetTimer) clearTimeout(resetTimer);
+    resetTimer = setTimeout(() => setCopied(false), 1200);
   }
 
   return (
@@ -280,7 +326,11 @@ function VaultRow(p: { item: VaultItem; selected: boolean; onClick: () => void }
       role="option"
       aria-selected={p.selected}
       tabindex="0"
-      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && p.onClick()}
+      onKeyDown={(e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        p.onClick();
+      }}
     >
       <SiteIcon title={p.item.title} url={p.item.url} class="item-icon" />
       <div class="item-info">
@@ -297,7 +347,11 @@ function VaultRow(p: { item: VaultItem; selected: boolean; onClick: () => void }
             title={copied() ? t('list.totpCopied') : t('list.copyTotp')}
             role="button"
             tabindex="0"
-            onKeyDown={(e) => e.key === 'Enter' && copyTotp(e)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              e.preventDefault();
+              void copyTotp(e);
+            }}
           >
             {copied() ? t('list.totpCopied') : '··· ···'}
           </span>

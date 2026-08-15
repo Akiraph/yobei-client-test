@@ -1,3 +1,9 @@
+.ui-backdrop {
+  background: var(--overlay-bg);
+  -webkit-backdrop-filter: blur(var(--overlay-blur));
+  backdrop-filter: blur(var(--overlay-blur));
+}
+
 .fog-input {
   width: 100%;
   padding: 10px 14px;

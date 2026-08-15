@@ -1,4 +1,4 @@
-import { Show, createSignal, onMount } from 'solid-js';
+import { Show, createSignal, onCleanup, onMount } from 'solid-js';
 import { IconShield } from '../components/Icon';
 import { PinInput } from '../components/PinInput';
 import { QrCode } from '../components/QrCode';
@@ -22,18 +22,19 @@ export default function Setup() {
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal('');
 
-  onMount(async () => {
+  onMount(() => {
+    let active = true;
+    onCleanup(() => { active = false; });
     if (!inTauri) return;
-    try {
-      const transfer = await pendingDeviceTransfer();
-      if (!transfer) return;
+    void pendingDeviceTransfer().then((transfer) => {
+      if (!active || !transfer) return;
       setQr(transfer.qr);
       setExpiresAt(transfer.expires_at);
       setApproved(transfer.approved);
       setStep('waiting');
-    } catch (cause) {
-      fail(cause, 'operation_failed');
-    }
+    }).catch((cause) => {
+      if (active) fail(cause, 'operation_failed');
+    });
   });
 
   const validPassword = () => /^\d{6}$/.test(password()) && password() === confirmation();

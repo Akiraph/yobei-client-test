@@ -1,22 +1,25 @@
-import { Show } from 'solid-js';
+import { createMemo, Show } from 'solid-js';
 import type { JSX } from 'solid-js';
-import { state, setActiveNav, lock, toggleSettings, runSync } from '../lib/store';
-import { t } from '../lib/i18n';
-import { IconGrid, IconNote, IconLock, IconSettings, IconRefresh } from './Icon';
+import { t } from '../../../lib/i18n';
+import { IconGrid, IconNote, IconLock, IconSettings, IconRefresh } from '../../../components/Icon';
+import type { VaultFeature } from '../model';
 
 interface Props {
+  feature: VaultFeature;
   onNavigate?: () => void;
 }
 
 export default function Sidebar(props: Props) {
+  const itemCount = createMemo(() => props.feature.items().length);
+  const noteCount = createMemo(() => props.feature.items().filter((item) => item.type === 'note').length);
+
   function nav(id: string) {
-    toggleSettings(false);
-    setActiveNav(id);
+    props.feature.navigate(id);
     props.onNavigate?.();
   }
 
   function openSettings() {
-    toggleSettings(true);
+    props.feature.openSettings();
     props.onNavigate?.();
   }
 
@@ -24,17 +27,17 @@ export default function Sidebar(props: Props) {
     <nav class="sidebar-nav">
       <div class="sidebar-section">
         <div class="sidebar-title">{t('nav.vault')}</div>
-        <NavItem id="all" icon={<IconGrid size={15} />} label={t('nav.allItems')} count={state.items.length} active={!state.showSettings && state.activeNav === 'all'} onClick={nav} />
-        <NavItem id="notes" icon={<IconNote size={15} />} label={t('nav.notes')} count={state.items.filter((item) => item.type === 'note').length} active={!state.showSettings && state.activeNav === 'notes'} onClick={nav} />
+        <NavItem id="all" icon={<IconGrid size={15} />} label={t('nav.allItems')} count={itemCount()} active={!props.feature.settingsOpen() && props.feature.activeNav() === 'all'} onClick={nav} />
+        <NavItem id="notes" icon={<IconNote size={15} />} label={t('nav.notes')} count={noteCount()} active={!props.feature.settingsOpen() && props.feature.activeNav() === 'notes'} onClick={nav} />
       </div>
 
       <div class="sidebar-footer">
-        <SyncButton onOpenSettings={openSettings} />
-        <button class="nav-item" classList={{ active: state.showSettings }} onClick={openSettings}>
+        <SyncButton feature={props.feature} onOpenSettings={openSettings} />
+        <button class="nav-item" classList={{ active: props.feature.settingsOpen() }} onClick={openSettings}>
           <span class="nav-icon"><IconSettings size={15} /></span>
           <span class="nav-label">{t('nav.settings')}</span>
         </button>
-        <button class="nav-item sidebar-lock" onClick={lock}>
+        <button class="nav-item sidebar-lock" onClick={props.feature.lock}>
           <span class="nav-icon"><IconLock size={15} /></span>
           <span class="nav-label">{t('nav.lock')}</span>
         </button>
@@ -43,8 +46,8 @@ export default function Sidebar(props: Props) {
   );
 }
 
-function SyncButton(props: { onOpenSettings: () => void }) {
-  const sync = () => state.sync;
+function SyncButton(props: { feature: VaultFeature; onOpenSettings: () => void }) {
+  const sync = () => props.feature.sync();
   const configured = () => sync().configured;
 
   const label = () => {
@@ -70,7 +73,7 @@ function SyncButton(props: { onOpenSettings: () => void }) {
     <button
       class="nav-item sync-nav-item"
       classList={{ syncing: sync().syncing, error: !!sync().lastError }}
-      onClick={() => configured() ? runSync() : props.onOpenSettings()}
+      onClick={() => configured() ? void props.feature.runSync() : props.onOpenSettings()}
       disabled={sync().syncing}
       aria-busy={sync().syncing}
       aria-label={actionLabel()}

@@ -1,4 +1,4 @@
-import { createEffect, createSignal, Show } from 'solid-js';
+import { createEffect, createSignal, onCleanup, Show } from 'solid-js';
 import { initial } from '../lib/format';
 import { siteIconUrl } from '../lib/siteIcons';
 
@@ -15,9 +15,13 @@ export default function SiteIcon(props: Props) {
   createEffect(() => {
     const url = props.url;
     const title = props.title;
+    let active = true;
     setBroken(false);
     setSource(undefined);
-    siteIconUrl(url, title).then((value) => setSource(value));
+    siteIconUrl(url, title)
+      .then((value) => { if (active) setSource(value); })
+      .catch(() => {});
+    onCleanup(() => { active = false; });
   });
 
   return (
