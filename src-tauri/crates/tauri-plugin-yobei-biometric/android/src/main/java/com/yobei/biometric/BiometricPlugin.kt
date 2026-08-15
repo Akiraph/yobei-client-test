@@ -25,6 +25,7 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 private const val BIOMETRIC_KEY_ALIAS = "yobei_biometric_key"
+private const val BIOMETRIC_DATA_KEY_ALIAS = "yobei_biometric_data_key"
 private const val DEVICE_KEY_ALIAS = "yobei_device_key"
 private const val KEY_TIMEOUT_SECONDS = 30
 private const val GCM_IV_LENGTH = 12
@@ -110,7 +111,7 @@ class BiometricPlugin(private val activity: Activity) : Plugin(activity) {
             return
         }
         val key = try {
-            getOrCreateKey(BIOMETRIC_KEY_ALIAS, userAuthentication = true)
+            getOrCreateKey(BIOMETRIC_DATA_KEY_ALIAS, userAuthentication = false)
         } catch (_: Exception) {
             reject(invoke, ErrorCode.OPERATION_FAILED, R.string.biometric_key_unavailable)
             return
@@ -149,7 +150,7 @@ class BiometricPlugin(private val activity: Activity) : Plugin(activity) {
             return
         }
         val key = try {
-            getOrCreateKey(BIOMETRIC_KEY_ALIAS, userAuthentication = true)
+            getBiometricDataKey()
         } catch (_: Exception) {
             reject(invoke, ErrorCode.OPERATION_FAILED, R.string.biometric_key_unavailable)
             return
@@ -177,6 +178,9 @@ class BiometricPlugin(private val activity: Activity) : Plugin(activity) {
             invoke.parseArgs(DeleteArgs::class.java)
             if (keyStore.containsAlias(BIOMETRIC_KEY_ALIAS)) {
                 keyStore.deleteEntry(BIOMETRIC_KEY_ALIAS)
+            }
+            if (keyStore.containsAlias(BIOMETRIC_DATA_KEY_ALIAS)) {
+                keyStore.deleteEntry(BIOMETRIC_DATA_KEY_ALIAS)
             }
             invoke.resolve(JSObject())
         } catch (_: Exception) {
@@ -254,6 +258,19 @@ class BiometricPlugin(private val activity: Activity) : Plugin(activity) {
         }
     }
 
+    private fun getBiometricDataKey(): SecretKey {
+        if (keyStore.containsAlias(BIOMETRIC_DATA_KEY_ALIAS)) {
+            return getOrCreateKey(BIOMETRIC_DATA_KEY_ALIAS, userAuthentication = false)
+        }
+        // Keep existing installations usable. Older releases encrypted the
+        // blob with an authentication-bound key; new installations use the
+        // prompt result as the native biometric gate so weak face unlocks work.
+        if (keyStore.containsAlias(BIOMETRIC_KEY_ALIAS)) {
+            return keyStore.getKey(BIOMETRIC_KEY_ALIAS, null) as SecretKey
+        }
+        return getOrCreateKey(BIOMETRIC_DATA_KEY_ALIAS, userAuthentication = false)
+    }
+
     private fun generateKey(alias: String, userAuthentication: Boolean, strongBox: Boolean): SecretKey {
         val generator = KeyGenerator.getInstance(
             KeyProperties.KEY_ALGORITHM_AES,
@@ -328,6 +345,9 @@ class BiometricPlugin(private val activity: Activity) : Plugin(activity) {
         try {
             if (keyStore.containsAlias(BIOMETRIC_KEY_ALIAS)) {
                 keyStore.deleteEntry(BIOMETRIC_KEY_ALIAS)
+            }
+            if (keyStore.containsAlias(BIOMETRIC_DATA_KEY_ALIAS)) {
+                keyStore.deleteEntry(BIOMETRIC_DATA_KEY_ALIAS)
             }
         } catch (_: Exception) {
             reject(invoke, ErrorCode.OPERATION_FAILED, R.string.biometric_key_unavailable)

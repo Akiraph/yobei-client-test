@@ -13,6 +13,7 @@ pub use pending_imp::*;
 mod android_imp {
     use std::sync::OnceLock;
     use tauri::{AppHandle, Wry};
+    use tauri_plugin_biometric::{AuthOptions, BiometricExt};
     use tauri_plugin_yobei_biometric as plugin;
     use yobei_core::error::{ErrorCode, Result};
 
@@ -29,12 +30,28 @@ mod android_imp {
     pub fn is_available() -> bool {
         app()
             .ok()
-            .and_then(|app| plugin::is_available(app).ok())
+            .and_then(|app| app.biometric().status().ok())
+            .map(|status| status.is_available)
             .unwrap_or(false)
     }
 
     pub fn request(message: &str) -> Result<bool> {
-        plugin::request(app()?, message)
+        let options = AuthOptions {
+            allow_device_credential: false,
+            cancel_title: None,
+            fallback_title: None,
+            title: Some("Yobei".to_string()),
+            subtitle: Some(message.to_string()),
+            confirmation_required: Some(false),
+        };
+        app()?
+            .biometric()
+            .authenticate(message.to_string(), options)
+            .map(|_| true)
+            .map_err(|error| {
+                eprintln!("[yobei] biometric authentication failed: {error}");
+                ErrorCode::BiometricUnavailable
+            })
     }
 
     pub fn protect_secret(plaintext: &[u8]) -> Result<Vec<u8>> {

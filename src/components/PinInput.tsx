@@ -1,4 +1,4 @@
-import { For, createMemo, createSignal } from 'solid-js';
+import { For, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
 
 interface PinInputProps {
   value: string;
@@ -22,6 +22,17 @@ export function PinInput(props: PinInputProps) {
       current: focused() && index === props.value.length,
     })),
   );
+
+  createEffect(() => {
+    if (!props.autofocus || props.disabled) return;
+    const focusInput = () => inputRef?.focus({ preventScroll: true });
+    const frame = window.requestAnimationFrame(focusInput);
+    const retry = window.setTimeout(focusInput, 80);
+    onCleanup(() => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(retry);
+    });
+  });
 
   const handleInput = (event: Event) => {
     const target = event.currentTarget as HTMLInputElement;

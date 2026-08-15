@@ -79,11 +79,11 @@ export function createVaultFeature() {
   }
 
   function back() {
-    if (isMobile() && history.state?.yobei === 'detail') {
-      history.back();
-      return;
-    }
+    const shouldPopDetail = isMobile() && history.state?.yobei === 'detail';
     resetDetail();
+    if (shouldPopDetail) {
+      history.back();
+    }
   }
 
   function selectVaultItem(id: string) {
@@ -114,6 +114,11 @@ export function createVaultFeature() {
   }
 
   function closeEditor() {
+    const current = editing();
+    if (isMobile() && current?.mode === 'new') {
+      back();
+      return;
+    }
     setEditing(null);
   }
 

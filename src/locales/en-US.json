@@ -308,7 +308,7 @@
     "settings.biometricDisabled": "Biometric unlock disabled",
     "settings.enableFailed": "Unable to enable biometrics. Please try again.",
     "settings.disableFailed": "Unable to disable biometrics. Please try again.",
-    "settings.biometricNote": "The current password is protected by the platform secure store and can only unlock this user account. The master password is still required when periodic confirmation expires.",
+    "settings.biometricNote": "Your master password is required only when enabling biometrics. After that, a successful system biometric check unlocks the vault directly.",
     "settings.enterServerUrl": "Enter a server URL",
     "settings.enterSetupCode": "Enter the one-time setup code",
     "settings.defaultDevice": "This device",

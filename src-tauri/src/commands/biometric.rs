@@ -59,16 +59,6 @@ pub async fn unlock_with_biometric(
     let cred: keychain::BiometricCredential =
         serde_json::from_slice(&json).map_err(|_| ErrorCode::DataCorrupt)?;
 
-    let settings = storage::load_security_settings(&conn, &state.device_key)?;
-    let now_ms = chrono::Utc::now().timestamp_millis();
-    if keychain::bio_confirm_expired(
-        settings.last_password_confirm_at,
-        settings.confirm_days,
-        now_ms,
-    ) {
-        return Err(ErrorCode::InvalidPassword);
-    }
-
     let keys = keychain::unlock_with_bio(&cred)?;
     let _state_gate = state.bridge.acquire_state_gate().await;
     if state.active_keys.lock().unwrap().is_some() {

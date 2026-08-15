@@ -308,7 +308,7 @@
     "settings.biometricDisabled": "已停用生物识别解锁",
     "settings.enableFailed": "启用失败,请重试。",
     "settings.disableFailed": "停用失败,请重试。",
-    "settings.biometricNote": "当前主密码由平台安全存储保护,仅本机当前用户可解。主密码定期确认到期后仍需输入主密码。",
+    "settings.biometricNote": "首次启用需要验证主密码;之后使用系统指纹、人脸或其他生物识别成功后直接解锁金库。",
     "settings.enterServerUrl": "请输入服务器地址",
     "settings.enterSetupCode": "请输入一次性设置码",
     "settings.defaultDevice": "此设备",

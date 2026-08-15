@@ -1,6 +1,6 @@
 import { createSignal, onCleanup, onMount, Show } from 'solid-js';
-import { unlock, recordPasswordEntry, biometricConfirmBlocked, syncSecuritySettings } from '../lib/store';
-import { unlockVault, unlockWithBiometric, biometricAvailable, isBiometricEnabled } from '../lib/ipc';
+import { unlock, recordPasswordEntry } from '../lib/store';
+import { unlockVault, unlockWithBiometric, isBiometricEnabled } from '../lib/ipc';
 import { IconFingerprint } from '../components/Icon';
 import { PinInput } from '../components/PinInput';
 import { notifyError } from '../lib/notify';
@@ -12,8 +12,8 @@ export default function Unlock() {
   const [status, setStatus] = createSignal<'idle' | 'ok' | 'error'>('idle');
   const [revealed, setRevealed] = createSignal(false);
   const [errMsg, setErrMsg] = createSignal('');
-  const [biometricSupported, setBiometricSupported] = createSignal(false);
   const [biometricEnabled, setBiometricEnabled] = createSignal(false);
+  const [pinAutofocus, setPinAutofocus] = createSignal(false);
   const [biometricBusy, setBiometricBusy] = createSignal(false);
   const [unlockBusy, setUnlockBusy] = createSignal(false);
   let autoBiometricAttempted = false;
@@ -23,19 +23,16 @@ export default function Unlock() {
     let alive = true;
     onCleanup(() => { alive = false; });
     async function probeBiometric() {
-      try {
-        // Read the authoritative confirmation clock before deciding whether to
-        // show the automatic prompt. localStorage can be stale after a lock.
-        await syncSecuritySettings();
-        const [available, enabled] = await Promise.all([biometricAvailable(), isBiometricEnabled()]);
-        if (!alive) return;
-        setBiometricSupported(available);
-        setBiometricEnabled(enabled);
-        if (available && enabled && !biometricConfirmBlocked() && !autoBiometricAttempted) {
-          autoBiometricAttempted = true;
-          void doBiometricUnlock();
-        }
-      } catch {
+      const enabled = await isBiometricEnabled().catch(() => false);
+      if (!alive) return;
+      setBiometricEnabled(enabled);
+      if (enabled && !autoBiometricAttempted) {
+        autoBiometricAttempted = true;
+        window.setTimeout(() => {
+          if (alive) void doBiometricUnlock();
+        }, 0);
+      } else {
+        setPinAutofocus(true);
       }
     }
     void probeBiometric();
@@ -85,12 +82,12 @@ export default function Unlock() {
       const message = errorMessage(error, 'biometric_unavailable');
       setErrMsg(message);
       notifyError(message);
+      setPinAutofocus(true);
     }
     setBiometricBusy(false);
   }
 
   const hint = () => {
-    if (biometricEnabled() && biometricConfirmBlocked()) return t('unlock.confirmHint');
     if (biometricEnabled()) return t('unlock.biometricHint');
     return t('unlock.hint');
   };
@@ -106,12 +103,12 @@ export default function Unlock() {
           value={password()}
           onInput={(value) => { setPassword(value); setStatus('idle'); }}
           onComplete={() => void doUnlock()}
-          autofocus
+          autofocus={pinAutofocus()}
           disabled={unlockBusy() || biometricBusy()}
           ariaLabel={t('unlock.passwordPlaceholder')}
         />
 
-        <Show when={biometricSupported() && biometricEnabled()}>
+        <Show when={biometricEnabled()}>
           <div class="unlock-actions">
             <button class="icon-btn unlock-hello" title={t('unlock.biometric')} aria-label={t('unlock.biometricUnlock')}
               onClick={() => void doBiometricUnlock()} disabled={unlockBusy() || biometricBusy()}>
