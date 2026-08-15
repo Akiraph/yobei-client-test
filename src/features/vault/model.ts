@@ -16,7 +16,6 @@ import {
   toggleSettings,
   visibleItems,
 } from '../../lib/store';
-import type { ItemData, ItemType } from '../../lib/types';
 import { errorMessage } from '../../lib/errors';
 import { inTauri, markActivity } from '../../lib/ipc';
 import { notifyError } from '../../lib/notify';
@@ -24,12 +23,6 @@ import { createMediaQuery } from '../../shared/useMediaQuery';
 
 type Pane = 'list' | 'detail';
 type EditState = { mode: 'new' } | { mode: 'edit'; id: string } | null;
-
-export interface VaultItemDraft {
-  id?: string;
-  type: ItemType;
-  data: ItemData;
-}
 
 export function createVaultFeature() {
   const isMobile = createMediaQuery('(max-width: 859px)');
@@ -83,13 +76,9 @@ export function createVaultFeature() {
     resetDetail();
   }
 
-  function showSelectedDetail() {
-    if (isMobile()) showDetail();
-  }
-
   function selectVaultItem(id: string) {
     selectItem(id);
-    showSelectedDetail();
+    if (isMobile()) showDetail();
   }
 
   function createNew() {
@@ -139,18 +128,6 @@ export function createVaultFeature() {
     toggleSettings(true);
   }
 
-  function saveVaultItem(input: VaultItemDraft) {
-    return saveItem(input);
-  }
-
-  function syncNow() {
-    return runSync();
-  }
-
-  function lockVault() {
-    lock();
-  }
-
   return {
     isMobile,
     items: () => state.items,
@@ -164,12 +141,12 @@ export function createVaultFeature() {
     setSearch,
     itemContentFor,
     accountMatches,
-    saveItem: saveVaultItem,
+    saveItem,
     saveAccountCredential,
-    runSync: syncNow,
+    runSync,
     navigate,
     openSettings,
-    lock: lockVault,
+    lock,
     pane,
     editing,
     editingItem: () => {

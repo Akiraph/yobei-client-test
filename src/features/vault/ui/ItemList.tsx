@@ -117,10 +117,6 @@ export default function ItemList(props: Props) {
       return;
     }
     try {
-      const credentialPatch = {
-        totp: parsed.secret,
-        ...(parsed.account ? { username: parsed.account } : {}),
-      };
       const candidates = (await Promise.all(
         props.feature.items()
           .filter((item) => item.type === 'login')
@@ -130,20 +126,14 @@ export default function ItemList(props: Props) {
           }),
       )).filter((item): item is VaultItem => item !== null);
       if (candidates.length === 0) {
-        try {
-          await props.feature.saveItem({ type: 'login', data: { title: parsed.title, totp: parsed.secret, username: parsed.account } });
-          notifyOk(t('list.totpAdded', { title: parsed.title }));
-        } catch (error) {
-          notifyError(errorMessage(error, 'operation_failed'));
-        }
+        await runTotpAction(() => createTotpItem(props.feature, parsed));
         return;
       }
       if (candidates.length === 1) {
-        await props.feature.saveAccountCredential(candidates[0], credentialPatch);
-        notifyOk(t('list.totpUpdated', { title: candidates[0].title }));
-      } else {
-        showCredentialChoice(props.feature, parsed, candidates);
+        await runTotpAction(() => updateTotpItem(props.feature, candidates[0], parsed));
+        return;
       }
+      showCredentialChoice(props.feature, parsed, candidates);
     } catch (error) {
       notifyError(errorMessage(error, 'operation_failed'));
     }
@@ -241,7 +231,34 @@ export default function ItemList(props: Props) {
   );
 }
 
-function parseOtpauthUri(uri: string): { title: string; secret: string; account?: string; service?: string } | null {
+type ParsedTotp = { title: string; secret: string; account?: string; service?: string };
+
+async function runTotpAction(action: () => Promise<void>) {
+  try {
+    await action();
+  } catch (error) {
+    notifyError(errorMessage(error, 'operation_failed'));
+  }
+}
+
+function totpCredentialPatch(parsed: ParsedTotp) {
+  return {
+    totp: parsed.secret,
+    ...(parsed.account ? { username: parsed.account } : {}),
+  };
+}
+
+async function createTotpItem(feature: VaultFeature, parsed: ParsedTotp) {
+  await feature.saveItem({ type: 'login', data: { title: parsed.title, totp: parsed.secret, username: parsed.account } });
+  notifyOk(t('list.totpAdded', { title: parsed.title }));
+}
+
+async function updateTotpItem(feature: VaultFeature, item: VaultItem, parsed: ParsedTotp) {
+  await feature.saveAccountCredential(item, totpCredentialPatch(parsed));
+  notifyOk(t('list.totpUpdated', { title: item.title }));
+}
+
+function parseOtpauthUri(uri: string): ParsedTotp | null {
   try {
     const url = new URL(uri);
     if (url.protocol !== 'otpauth:' || !url.pathname.includes('/')) return null;
@@ -257,39 +274,25 @@ function parseOtpauthUri(uri: string): { title: string; secret: string; account?
   }
 }
 
-function showCredentialChoice(feature: VaultFeature, parsed: { title: string; secret: string; account?: string; service?: string }, candidates: VaultItem[]) {
-  const choices = candidates.length > 0 ? candidates : feature.items().filter((item) => item.type === 'login');
+function showCredentialChoice(feature: VaultFeature, parsed: ParsedTotp, candidates: VaultItem[]) {
   showDialog(
     t('list.chooseAccountTitle'),
     <div class="credential-choice-list">
-      <p class="dialog-desc">{t(candidates.length ? 'list.chooseAccountHint' : 'list.noAccountMatch')}</p>
-      <For each={choices}>
+      <p class="dialog-desc">{t('list.chooseAccountHint')}</p>
+      <For each={candidates}>
         {(item) => (
-          <button class="credential-choice" onClick={async () => {
+          <button class="credential-choice" onClick={() => {
             hideDialog();
-            try {
-              await feature.saveAccountCredential(item, {
-                totp: parsed.secret,
-                ...(parsed.account ? { username: parsed.account } : {}),
-              });
-              notifyOk(t('list.totpUpdated', { title: item.title }));
-            } catch (error) {
-              notifyError(errorMessage(error, 'operation_failed'));
-            }
+            void runTotpAction(() => updateTotpItem(feature, item, parsed));
           }}>
             <span class="credential-choice-title">{item.title}</span>
             <span class="credential-choice-meta">{item.username || t('list.noUsername')}{item.url ? ` · ${item.url}` : ''}</span>
           </button>
         )}
       </For>
-      <button class="btn btn-primary credential-choice-new" onClick={async () => {
+      <button class="btn btn-primary credential-choice-new" onClick={() => {
         hideDialog();
-        try {
-          await feature.saveItem({ type: 'login', data: { title: parsed.title, totp: parsed.secret, username: parsed.account } });
-          notifyOk(t('list.totpAdded', { title: parsed.title }));
-        } catch (error) {
-          notifyError(errorMessage(error, 'operation_failed'));
-        }
+        void runTotpAction(() => createTotpItem(feature, parsed));
       }}>
         {t('list.createAccount')}
       </button>

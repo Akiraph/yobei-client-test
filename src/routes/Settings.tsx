@@ -580,14 +580,8 @@ function ImportSection() {
 function ExportSection() {
   const [busy, setBusy] = createSignal(false);
 
-  async function exportEncrypted() {
-    try {
-      const content = await exportVault();
-      const path = await saveTextFile('yobei-vault.yobei', content);
-      if (path != null) notifyOk(t('common.done'));
-    } catch (error) {
-      notifyError(errorMessage(error, 'file_failed'));
-    }
+  function exportEncrypted() {
+    return saveExport(exportVault, 'yobei-vault.yobei');
   }
 
   function confirmPlaintextExport() {
@@ -603,16 +597,19 @@ function ExportSection() {
     );
   }
 
-  async function exportPlaintext() {
-    setBusy(true);
+  function exportPlaintext() {
+    return saveExport(exportCsv, 'yobei-export.csv', true);
+  }
+
+  async function saveExport(load: () => Promise<string>, fileName: string, trackBusy = false) {
+    if (trackBusy) setBusy(true);
     try {
-      const content = await exportCsv();
-      const path = await saveTextFile('yobei-export.csv', content);
+      const path = await saveTextFile(fileName, await load());
       if (path != null) notifyOk(t('common.done'));
     } catch (error) {
       notifyError(errorMessage(error, 'file_failed'));
     } finally {
-      setBusy(false);
+      if (trackBusy) setBusy(false);
     }
   }
 

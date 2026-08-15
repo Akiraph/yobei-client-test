@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, onMount, Show } from 'solid-js';
+import { createSignal, lazy, onCleanup, onMount, Show, Suspense } from 'solid-js';
 import { state, applyTheme, setPhase, initVaultLockListener, startSyncPolling } from './lib/store';
 import { isDesktop } from './lib/window';
 import { isInitialized, inTauri } from './lib/ipc';
@@ -8,9 +8,9 @@ import { syncTrayLocale } from './lib/tray';
 import { dialogState, hideDialog } from './lib/dialog';
 import Dialog from './components/Dialog';
 import Titlebar from './components/Titlebar';
-import Setup from './routes/Setup';
-import Unlock from './routes/Unlock';
-import Vault from './pages/VaultPage';
+const Setup = lazy(() => import('./routes/Setup'));
+const Unlock = lazy(() => import('./routes/Unlock'));
+const Vault = lazy(() => import('./pages/VaultPage'));
 
 export default function App() {
   const [startupFailed, setStartupFailed] = createSignal(false);
@@ -55,25 +55,19 @@ export default function App() {
 
       <div class="app-body" classList={{ 'with-titlebar': isDesktop() }}>
         <Show when={state.phase === 'loading'}>
-          <div class="setup-stage">
-            <div class="setup-card setup-brand">
-              <div class="brand-name font-serif">{t('app.name')}</div>
-              <Show when={startupFailed()} fallback={<div class="brand-sub">{t('common.loading')}</div>}>
-                <div class="brand-sub">{t('error.setupFailed')}</div>
-                <button class="btn btn-primary setup-cta" onClick={() => void initialize()}>{t('common.retry')}</button>
-              </Show>
-            </div>
-          </div>
+          <LoadingStage failed={startupFailed()} onRetry={() => void initialize()} />
         </Show>
-        <Show when={state.phase === 'setup'}>
-          <Setup />
-        </Show>
-        <Show when={state.phase === 'locked'}>
-          <Unlock />
-        </Show>
-        <Show when={state.phase === 'unlocked'}>
-          <Vault />
-        </Show>
+        <Suspense fallback={<LoadingStage />}>
+          <Show when={state.phase === 'setup'}>
+            <Setup />
+          </Show>
+          <Show when={state.phase === 'locked'}>
+            <Unlock />
+          </Show>
+          <Show when={state.phase === 'unlocked'}>
+            <Vault />
+          </Show>
+        </Suspense>
       </div>
 
       <NotificationStack />
@@ -82,5 +76,19 @@ export default function App() {
         {dialogState().children}
       </Dialog>
     </>
+  );
+}
+
+function LoadingStage(props: { failed?: boolean; onRetry?: () => void }) {
+  return (
+    <div class="setup-stage">
+      <div class="setup-card setup-brand">
+        <div class="brand-name font-serif">{t('app.name')}</div>
+        <Show when={props.failed} fallback={<div class="brand-sub">{t('common.loading')}</div>}>
+          <div class="brand-sub">{t('error.setupFailed')}</div>
+          <button class="btn btn-primary setup-cta" onClick={() => props.onRetry?.()}>{t('common.retry')}</button>
+        </Show>
+      </div>
+    </div>
   );
 }

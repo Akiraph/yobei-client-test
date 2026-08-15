@@ -209,13 +209,13 @@ function TotpDisplay(props: { secret: string }) {
   };
 
   createEffect(() => {
-    props.secret;
+    const secret = props.secret;
     let period = 30;
     let cancelled = false;
 
     async function refresh() {
       try {
-        const r = await computeTotp(props.secret);
+        const r = await computeTotp(secret);
         if (cancelled) return;
         setCode(r.code);
         setError('');

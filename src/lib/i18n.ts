@@ -3,8 +3,6 @@ import { locale as platformLocale } from '@tauri-apps/plugin-os';
 import { inTauri, readExternalAsset } from './ipc';
 import { isDesktop } from './window';
 import bundledManifest from '../locales/index.json';
-import bundledEnglish from '../locales/en-US.json';
-import bundledChinese from '../locales/zh-CN.json';
 
 export type Locale = string;
 
@@ -27,9 +25,8 @@ const [localeIds, setLocaleIds] = createSignal<Locale[]>([]);
 const [resources, setResources] = createSignal<Record<Locale, LocaleResource>>({});
 const [currentLocale, setCurrentLocale] = createSignal<Locale>(fallbackLocale);
 const localeListeners = new Set<() => void>();
-const bundledResources: Partial<Record<Locale, LocaleResource>> = {
-  'en-US': bundledEnglish as LocaleResource,
-  'zh-CN': bundledChinese as LocaleResource,
+const bundledResources: Partial<Record<Locale, () => Promise<LocaleResource>>> = {
+  'en-US': () => import('../locales/en-US.json').then(({ default: resource }) => resource as LocaleResource),
 };
 
 async function readJson(path: string): Promise<unknown> {
@@ -64,9 +61,10 @@ function loadResource(value: Locale): Promise<LocaleResource> {
       setResources((current) => ({ ...current, [value]: resource }));
       return resource;
     })
-    .catch((error) => {
-      const bundled = bundledResources[value];
-      if (!bundled) throw error;
+    .catch(async (error) => {
+      const loadBundled = bundledResources[value];
+      if (!loadBundled) throw error;
+      const bundled = await loadBundled();
       console.warn(`[yobei:i18n] using bundled resource: ${value}`, error);
       setResources((current) => ({ ...current, [value]: bundled }));
       return bundled;
@@ -90,16 +88,18 @@ async function loadLocales(): Promise<void> {
   if (!ids.includes(fallbackLocale)) ids.unshift(fallbackLocale);
   const localeList = [...new Set(ids)];
   setLocaleIds(localeList);
-  const loaded = await Promise.allSettled(localeList.map((value) => loadResource(value)));
-  loaded.forEach((result, index) => {
-    if (result.status === 'rejected') {
-      console.warn(`[yobei:i18n] locale resource unavailable: ${localeList[index]}`, result.reason);
-    }
-  });
-  if (loaded[localeList.indexOf(fallbackLocale)]?.status !== 'fulfilled') {
-    throw new Error(`${fallbackLocale} unavailable`);
-  }
   const next = await readLocale();
+  await loadResource(fallbackLocale);
+  if (next !== fallbackLocale) {
+    try {
+      await loadResource(next);
+    } catch (error) {
+      console.warn(`[yobei:i18n] locale resource unavailable: ${next}`, error);
+      setCurrentLocale(fallbackLocale);
+      if (typeof document !== 'undefined') document.documentElement.lang = fallbackLocale;
+      return;
+    }
+  }
   setCurrentLocale(next);
   if (typeof document !== 'undefined') document.documentElement.lang = next;
 }
