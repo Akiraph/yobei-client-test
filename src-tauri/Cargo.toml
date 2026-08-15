@@ -53,3 +53,24 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+# Keep unlock crypto speed-optimized without changing the KDF or its stored
+# parameters. The application is size-optimized, but Argon2 is a hot path and
+# must not inherit the slower size profile on Android or Windows.
+[profile.dev.package.yobei-core]
+opt-level = 3
+
+[profile.dev.package.argon2]
+opt-level = 3
+
+[profile.dev.package.blake2]
+opt-level = 3
+
+[profile.release.package.yobei-core]
+opt-level = 3
+
+[profile.release.package.argon2]
+opt-level = 3
+
+[profile.release.package.blake2]
+opt-level = 3

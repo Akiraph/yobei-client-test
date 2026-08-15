@@ -1,5 +1,5 @@
 import { createSignal, onCleanup, onMount, Show } from 'solid-js';
-import { unlock, recordPasswordEntry, biometricConfirmBlocked } from '../lib/store';
+import { unlock, recordPasswordEntry, biometricConfirmBlocked, syncSecuritySettings } from '../lib/store';
 import { unlockVault, unlockWithBiometric, biometricAvailable, isBiometricEnabled } from '../lib/ipc';
 import { IconFingerprint } from '../components/Icon';
 import { PinInput } from '../components/PinInput';
@@ -12,25 +12,33 @@ export default function Unlock() {
   const [status, setStatus] = createSignal<'idle' | 'ok' | 'error'>('idle');
   const [revealed, setRevealed] = createSignal(false);
   const [errMsg, setErrMsg] = createSignal('');
-  const [biometricReady, setBiometricReady] = createSignal(false);
+  const [biometricSupported, setBiometricSupported] = createSignal(false);
+  const [biometricEnabled, setBiometricEnabled] = createSignal(false);
   const [biometricBusy, setBiometricBusy] = createSignal(false);
+  const [unlockBusy, setUnlockBusy] = createSignal(false);
   let autoBiometricAttempted = false;
   let transitionTimer: ReturnType<typeof setTimeout> | undefined;
 
   onMount(() => {
     let alive = true;
     onCleanup(() => { alive = false; });
-    if (biometricConfirmBlocked()) return;
-    Promise.all([biometricAvailable(), isBiometricEnabled()])
-      .then(([avail, enabled]) => {
+    async function probeBiometric() {
+      try {
+        // Read the authoritative confirmation clock before deciding whether to
+        // show the automatic prompt. localStorage can be stale after a lock.
+        await syncSecuritySettings();
+        const [available, enabled] = await Promise.all([biometricAvailable(), isBiometricEnabled()]);
         if (!alive) return;
-        setBiometricReady(avail && enabled);
-        if (avail && enabled && !autoBiometricAttempted) {
+        setBiometricSupported(available);
+        setBiometricEnabled(enabled);
+        if (available && enabled && !biometricConfirmBlocked() && !autoBiometricAttempted) {
           autoBiometricAttempted = true;
           void doBiometricUnlock();
         }
-      })
-      .catch(() => {});
+      } catch {
+      }
+    }
+    void probeBiometric();
   });
 
   onCleanup(() => {
@@ -38,12 +46,14 @@ export default function Unlock() {
   });
 
   async function doUnlock() {
+    if (unlockBusy() || biometricBusy()) return;
     if (!/^\d{6}$/.test(password())) {
       setStatus('error');
       setErrMsg(t('unlock.passwordRequired'));
       return;
     }
     setStatus('idle');
+    setUnlockBusy(true);
     try {
       await unlockVault(password());
       recordPasswordEntry();
@@ -56,10 +66,13 @@ export default function Unlock() {
       setErrMsg(message);
       notifyError(message);
       setPassword('');
+    } finally {
+      setUnlockBusy(false);
     }
   }
 
   async function doBiometricUnlock() {
+    if (unlockBusy() || biometricBusy()) return;
     setStatus('idle');
     setBiometricBusy(true);
     try {
@@ -77,8 +90,8 @@ export default function Unlock() {
   }
 
   const hint = () => {
-    if (biometricConfirmBlocked()) return t('unlock.confirmHint');
-    if (biometricReady()) return t('unlock.biometricHint');
+    if (biometricEnabled() && biometricConfirmBlocked()) return t('unlock.confirmHint');
+    if (biometricEnabled()) return t('unlock.biometricHint');
     return t('unlock.hint');
   };
 
@@ -94,13 +107,14 @@ export default function Unlock() {
           onInput={(value) => { setPassword(value); setStatus('idle'); }}
           onComplete={() => void doUnlock()}
           autofocus
+          disabled={unlockBusy() || biometricBusy()}
           ariaLabel={t('unlock.passwordPlaceholder')}
         />
 
-        <Show when={biometricReady()}>
+        <Show when={biometricSupported() && biometricEnabled()}>
           <div class="unlock-actions">
             <button class="icon-btn unlock-hello" title={t('unlock.biometric')} aria-label={t('unlock.biometricUnlock')}
-              onClick={doBiometricUnlock} disabled={biometricBusy()}>
+              onClick={() => void doBiometricUnlock()} disabled={unlockBusy() || biometricBusy()}>
               <IconFingerprint size={20} />
             </button>
           </div>
@@ -109,7 +123,7 @@ export default function Unlock() {
         <div class={`unlock-status${status() === 'ok' ? ' ok' : status() === 'error' ? ' error' : ''}`}>
           <Show when={status() === 'ok'}>{t('unlock.success')}</Show>
           <Show when={status() === 'error'}>{errMsg()}</Show>
-          <Show when={status() === 'idle'}>{hint()}</Show>
+          <Show when={status() === 'idle'}>{unlockBusy() || biometricBusy() ? t('common.processing') : hint()}</Show>
         </div>
       </div>
     </div>

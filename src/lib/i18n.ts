@@ -3,6 +3,8 @@ import { locale as platformLocale } from '@tauri-apps/plugin-os';
 import { inTauri, readExternalAsset } from './ipc';
 import { isDesktop } from './window';
 import bundledManifest from '../locales/index.json';
+import bundledEnglish from '../locales/en-US.json';
+import bundledChinese from '../locales/zh-CN.json';
 
 export type Locale = string;
 
@@ -21,13 +23,14 @@ const fallbackLocale = 'en-US';
 const localeStorageKey = 'yobei-locale-v2';
 const explicitLocaleStorageKey = 'yobei-locale-explicit-v2';
 const resourceCache = new Map<Locale, Promise<LocaleResource>>();
-const [localeIds, setLocaleIds] = createSignal<Locale[]>([]);
-const [resources, setResources] = createSignal<Record<Locale, LocaleResource>>({});
+const bundledResources: Record<Locale, LocaleResource> = {
+  'en-US': bundledEnglish as LocaleResource,
+  'zh-CN': bundledChinese as LocaleResource,
+};
+const [localeIds, setLocaleIds] = createSignal<Locale[]>(Object.keys(bundledResources));
+const [resources, setResources] = createSignal<Record<Locale, LocaleResource>>(bundledResources);
 const [currentLocale, setCurrentLocale] = createSignal<Locale>(fallbackLocale);
 const localeListeners = new Set<() => void>();
-const bundledResources: Partial<Record<Locale, () => Promise<LocaleResource>>> = {
-  'en-US': () => import('../locales/en-US.json').then(({ default: resource }) => resource as LocaleResource),
-};
 
 async function readJson(path: string): Promise<unknown> {
   let externalError: unknown;
@@ -52,7 +55,8 @@ async function readJson(path: string): Promise<unknown> {
 function loadResource(value: Locale): Promise<LocaleResource> {
   const cached = resourceCache.get(value);
   if (cached) return cached;
-  const request = readJson(`locales/${value}.json`)
+  const bundled = bundledResources[value];
+  const request = (bundled ? Promise.resolve(bundled) : readJson(`locales/${value}.json`))
     .then((value) => value as LocaleResource)
     .then((resource) => {
       if (resource.locale !== value || typeof resource.displayName !== 'string' || !resource.messages) {
@@ -61,10 +65,8 @@ function loadResource(value: Locale): Promise<LocaleResource> {
       setResources((current) => ({ ...current, [value]: resource }));
       return resource;
     })
-    .catch(async (error) => {
-      const loadBundled = bundledResources[value];
-      if (!loadBundled) throw error;
-      const bundled = await loadBundled();
+    .catch((error) => {
+      if (!bundled) throw error;
       console.warn(`[yobei:i18n] using bundled resource: ${value}`, error);
       setResources((current) => ({ ...current, [value]: bundled }));
       return bundled;

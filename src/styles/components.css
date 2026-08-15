@@ -111,6 +111,12 @@
 
 .icon-btn:active { transform: scale(0.95); }
 
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+  transform: none;
+}
+
 .icon-btn.copied {
   color: var(--jade);
   background: var(--jade-bg);

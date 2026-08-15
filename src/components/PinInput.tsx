@@ -6,6 +6,7 @@ interface PinInputProps {
   onInput: (value: string) => void;
   onComplete?: () => void;
   autofocus?: boolean;
+  disabled?: boolean;
   ariaLabel?: string;
 }
 
@@ -30,7 +31,7 @@ export function PinInput(props: PinInputProps) {
   };
 
   return (
-    <div class="pin-input" onClick={() => inputRef?.focus()}>
+    <div class="pin-input" classList={{ disabled: props.disabled }} onClick={() => !props.disabled && inputRef?.focus()}>
       <input
         ref={inputRef}
         type="text"
@@ -45,6 +46,7 @@ export function PinInput(props: PinInputProps) {
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         autofocus={props.autofocus}
+        disabled={props.disabled}
         aria-label={props.ariaLabel}
       />
       <For each={cells()}>

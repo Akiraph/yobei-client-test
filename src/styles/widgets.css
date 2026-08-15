@@ -224,6 +224,11 @@
   cursor: text;
 }
 
+.pin-input.disabled {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
 .pin-cell {
   width: 42px;
   height: 48px;

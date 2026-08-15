@@ -14,23 +14,39 @@ interface Props {
 export default function VaultPageMobile(props: Props) {
   let touchStartX = 0;
   let touchStartY = 0;
+  let gestureHandled = false;
 
   function onTouchStart(event: TouchEvent) {
     const touch = event.touches[0];
     if (touch) {
       touchStartX = touch.clientX;
       touchStartY = touch.clientY;
+      gestureHandled = false;
     }
   }
 
   function onTouchMove(event: TouchEvent) {
     const touch = event.touches[0];
-    if (!touch || props.feature.sidebarOpen()) return;
+    if (!touch || gestureHandled) return;
     const dx = touch.clientX - touchStartX;
     const dy = touch.clientY - touchStartY;
-    if (touchStartX < 28 && dx > 64 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      props.feature.openSidebar();
+    if (Math.abs(dx) <= 64 || Math.abs(dx) <= Math.abs(dy) * 1.5) return;
+
+    if (props.feature.sidebarOpen() && dx < 0) {
+      gestureHandled = true;
+      props.feature.closeSidebar();
+      return;
     }
+
+    if (!props.feature.sidebarOpen() && touchStartX < 28 && dx > 0) {
+      gestureHandled = true;
+      props.feature.openSidebar();
+      return;
+    }
+  }
+
+  function onTouchEnd() {
+    gestureHandled = false;
   }
 
   return (
@@ -38,6 +54,8 @@ export default function VaultPageMobile(props: Props) {
       class={`vault-root fog-reveal${props.feature.condensing() ? ' fog-condense' : ''}`}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchEnd}
     >
       <Show when={props.feature.settingsOpen()}>
         <Suspense fallback={null}>
@@ -46,12 +64,10 @@ export default function VaultPageMobile(props: Props) {
       </Show>
 
       <Show when={!props.feature.settingsOpen()}>
-        <Show when={props.feature.sidebarOpen()}>
-          <Backdrop class="sidebar-scrim" onPointerDown={props.feature.closeSidebar} />
-          <aside class="vault-sidebar drawer">
-            <Sidebar feature={props.feature} onNavigate={props.feature.closeSidebar} />
-          </aside>
-        </Show>
+        <Backdrop class={`sidebar-scrim${props.feature.sidebarOpen() ? ' open' : ''}`} onPointerDown={props.feature.closeSidebar} />
+        <aside class={`vault-sidebar drawer${props.feature.sidebarOpen() ? ' open' : ''}`} aria-hidden={!props.feature.sidebarOpen()}>
+          <Sidebar feature={props.feature} onNavigate={props.feature.closeSidebar} />
+        </aside>
 
         <Show when={props.feature.pane() === 'list'}>
           <section class="vault-list">

@@ -8,6 +8,7 @@ import { isDesktop } from './window';
 
 let resourcePromise: Promise<SiteIconResource> | undefined;
 const RESOLVED_CACHE_KEY = 'yobei.site-icons.v1';
+let persistTimer: ReturnType<typeof setTimeout> | undefined;
 
 function loadResolvedCache(): Array<[string, string]> {
   try {
@@ -31,6 +32,14 @@ function persistResolvedCache() {
     localStorage.setItem(RESOLVED_CACHE_KEY, JSON.stringify(entries));
   } catch {
   }
+}
+
+function schedulePersistResolvedCache() {
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    persistTimer = undefined;
+    persistResolvedCache();
+  }, 120);
 }
 
 function loadResource(): Promise<SiteIconResource> {
@@ -64,10 +73,23 @@ function lookupMaintained(resource: SiteIconResource, host: string): string | un
   return parent ? resource.icons[parent] : undefined;
 }
 
+function fallbackIcon(host: string): string | undefined {
+  return host.includes('.')
+    ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`
+    : undefined;
+}
+
+export function siteIconUrlSync(url?: string, title?: string): string | undefined {
+  const host = hostFrom(url) || hostFrom(title);
+  if (!host) return undefined;
+  if (resolvedCache.has(host)) return resolvedCache.get(host) || fallbackIcon(host);
+  return fallbackIcon(host);
+}
+
 export async function siteIconUrl(url?: string, title?: string): Promise<string | undefined> {
   const host = hostFrom(url) || hostFrom(title);
   if (!host) return undefined;
-  if (resolvedCache.has(host)) return resolvedCache.get(host);
+  if (resolvedCache.has(host)) return resolvedCache.get(host) || fallbackIcon(host);
 
   const resource = await loadResource();
   let resolved = lookupMaintained(resource, host);
@@ -82,11 +104,9 @@ export async function siteIconUrl(url?: string, title?: string): Promise<string 
 
   // Last resort: Google's favicon service. Keep it behind the cache so a host
   // is never resolved twice during a session.
-  if (!resolved && host.includes('.')) {
-    resolved = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
-  }
+  if (!resolved) resolved = fallbackIcon(host);
 
   resolvedCache.set(host, resolved);
-  persistResolvedCache();
+  schedulePersistResolvedCache();
   return resolved;
 }

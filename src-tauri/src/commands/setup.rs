@@ -29,12 +29,27 @@ pub fn setup_master_password(password: String, state: tauri::State<'_, AppState>
 #[tauri::command]
 pub async fn unlock_vault(password: String, state: tauri::State<'_, AppState>) -> Result<()> {
     validate_pin(&password)?;
-    let conn = storage::open(&state.db_path)?;
-    let store_data =
-        storage::load_key_store(&conn, &state.device_key)?.ok_or(ErrorCode::NotInitialized)?;
-    let keys = keychain::unlock(password.as_bytes(), &store_data)?;
-    refresh_confirm_clock(&conn, &state.device_key)?;
+    if state.active_keys.lock().unwrap().is_some() {
+        return Ok(());
+    }
+
+    let db_path = state.db_path.clone();
+    let device_key = state.device_key;
+    let (conn, keys) = tauri::async_runtime::spawn_blocking(move || -> Result<_> {
+        let conn = storage::open(&db_path)?;
+        let store_data =
+            storage::load_key_store(&conn, &device_key)?.ok_or(ErrorCode::NotInitialized)?;
+        let keys = keychain::unlock(password.as_bytes(), &store_data)?;
+        refresh_confirm_clock(&conn, &device_key)?;
+        Ok((conn, keys))
+    })
+    .await
+    .map_err(|_| ErrorCode::OperationFailed)??;
+
     let _state_gate = state.bridge.acquire_state_gate().await;
+    if state.active_keys.lock().unwrap().is_some() {
+        return Ok(());
+    }
     *state.db_conn.lock().unwrap() = Some(conn);
     *state.active_keys.lock().unwrap() = Some(keys);
     state.touch();

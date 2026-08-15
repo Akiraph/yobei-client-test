@@ -29,6 +29,7 @@ export function createVaultFeature() {
   const [pane, setPane] = createSignal<Pane>('list');
   const [editing, setEditing] = createSignal<EditState>(null);
   const [sidebarOpen, setSidebarOpen] = createSignal(false);
+  let closingSidebarViaHistory = false;
 
   createEffect(() => {
     if (!isMobile()) setSidebarOpen(false);
@@ -36,7 +37,16 @@ export function createVaultFeature() {
 
   onMount(() => {
     const onPopState = () => {
-      if (isMobile() && pane() === 'detail') resetDetail();
+      if (!isMobile()) return;
+      if (closingSidebarViaHistory) {
+        closingSidebarViaHistory = false;
+        return;
+      }
+      if (sidebarOpen()) {
+        setSidebarOpen(false);
+        return;
+      }
+      if (pane() === 'detail') resetDetail();
     };
     window.addEventListener('popstate', onPopState);
     onCleanup(() => window.removeEventListener('popstate', onPopState));
@@ -108,10 +118,21 @@ export function createVaultFeature() {
   }
 
   function openSidebar() {
+    if (!isMobile() || sidebarOpen()) return;
     setSidebarOpen(true);
+    if (history.state?.yobei !== 'sidebar') {
+      history.pushState({ ...(history.state ?? {}), yobei: 'sidebar' }, '');
+    }
   }
 
   function closeSidebar() {
+    if (!sidebarOpen()) return;
+    if (isMobile() && history.state?.yobei === 'sidebar') {
+      closingSidebarViaHistory = true;
+      setSidebarOpen(false);
+      history.back();
+      return;
+    }
     setSidebarOpen(false);
   }
 
