@@ -93,6 +93,15 @@
   overflow-y: auto;
 }
 
+/* Desktop sidebar sits directly over the fog/sky layers, which are brighter at
+   the top-left (white fog blob) than at the bottom. A consistent surface keeps
+   the nav items' hover/focus background from reading as lighter near the top. */
+.vault-sidebar:not(.drawer) {
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
 .sidebar-nav {
   display: flex;
   flex-direction: column;
@@ -697,51 +706,25 @@
   overflow: hidden;
   position: relative;
   z-index: 1;
-}
-
-.settings-layout {
-  display: grid;
-  grid-template-columns: 224px minmax(0, 1fr);
-  height: 100%;
-  width: 100%;
-}
-
-.settings-nav {
-  width: 220px;
-  flex-shrink: 0;
-  padding: 40px 24px calc(24px + env(safe-area-inset-bottom, 0px)) 32px;
   display: flex;
   flex-direction: column;
-  gap: 32px;
-  overflow-y: auto;
-  border-right: 1px solid var(--fog-200);
-}
-
-.settings-content {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
 }
 
 .settings-scroll {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 40px clamp(28px, 5vw, 72px) calc(48px + env(safe-area-inset-bottom, 0px));
 }
-
-.settings-mobile-picker { display: none; }
-.settings-section-select { width: 100%; min-width: 0; }
 
 .settings-head {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 28px 24px 16px;
 }
 
 .settings-head h1 {
@@ -757,34 +740,11 @@
   height: 30px;
 }
 
-.settings-nav-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.settings-nav-item {
-  padding: 10px 14px;
-  border-radius: var(--r-md);
-  font-size: 14px;
-  font-weight: 400;
-  color: var(--fog-500);
-  text-align: left;
-  cursor: pointer;
-  transition: all var(--dur-fast) var(--ease-fog);
-  min-height: var(--touch-min);
-}
-
-.settings-nav-item:hover {
-  background: var(--fog-150);
-  color: var(--fog-800);
-}
-
-.settings-nav-item.active {
-  background: rgba(255, 255, 255, 0.5);
-  color: var(--fog-800);
-  font-weight: 500;
-  backdrop-filter: blur(8px);
+.settings-body {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px calc(48px + env(safe-area-inset-bottom, 0px));
 }
 
 .settings-section { margin-bottom: 40px; }
@@ -1178,23 +1138,9 @@
     background: transparent;
   }
 
-  .settings-layout {
-    display: flex;
-    flex-direction: column;
-  }
-  .settings-nav {
-    width: 100%;
-    height: auto;
-    padding: max(16px, env(safe-area-inset-top, 0px)) 16px 14px;
-    gap: 14px;
-    overflow: visible;
-    border-right: none;
-    border-bottom: 1px solid var(--fog-200);
-  }
+  .settings-head { padding: max(16px, env(safe-area-inset-top, 0px)) 16px 12px; }
   .settings-head h1 { font-size: 24px; }
-  .settings-nav-list { display: none; }
-  .settings-mobile-picker { display: block; }
-  .settings-scroll { padding: 20px 16px calc(32px + env(safe-area-inset-bottom, 0px)); }
+  .settings-body { padding: 0 16px calc(32px + env(safe-area-inset-bottom, 0px)); }
 
   .setting-row {
     flex-direction: column;
