@@ -147,6 +147,22 @@
   box-shadow: inset 0 0 0 1px var(--fog-300);
 }
 
+/* Top nav items (全部项目 / 笔记) reuse the settings-sidebar button sizing and
+   its active glass state, per the settings-nav look. */
+.nav-item-primary {
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  font-size: 14px;
+  min-height: var(--touch-min);
+}
+
+.nav-item-primary[aria-current="page"] {
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--fog-800);
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+}
+
 .nav-icon {
   width: 16px;
   height: 16px;
