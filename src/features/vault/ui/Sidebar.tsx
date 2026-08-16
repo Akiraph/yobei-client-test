@@ -19,8 +19,8 @@ export default function Sidebar(props: Props) {
   }
 
   function openSettings() {
-    props.feature.openSettings();
     props.onNavigate?.();
+    props.feature.openSettings();
   }
 
   return (

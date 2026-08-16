@@ -31,6 +31,7 @@ export function createVaultFeature() {
   const [sidebarOpen, setSidebarOpen] = createSignal(false);
   const [scanning, setScanning] = createSignal(false);
   let closingSidebarViaHistory = false;
+  let closingSettingsViaHistory = false;
 
   createEffect(() => {
     if (!isMobile()) setSidebarOpen(false);
@@ -41,6 +42,14 @@ export function createVaultFeature() {
       if (!isMobile()) return;
       if (closingSidebarViaHistory) {
         closingSidebarViaHistory = false;
+        return;
+      }
+      if (closingSettingsViaHistory) {
+        closingSettingsViaHistory = false;
+        return;
+      }
+      if (state.showSettings) {
+        toggleSettings(false);
         return;
       }
       if (sidebarOpen()) {
@@ -145,6 +154,13 @@ export function createVaultFeature() {
   }
 
   function closeSettings() {
+    if (!state.showSettings) return;
+    if (isMobile() && history.state?.yobei === 'settings') {
+      closingSettingsViaHistory = true;
+      toggleSettings(false);
+      history.back();
+      return;
+    }
     toggleSettings(false);
   }
 
@@ -155,6 +171,9 @@ export function createVaultFeature() {
 
   function openSettings() {
     toggleSettings(true);
+    if (isMobile() && history.state?.yobei !== 'settings') {
+      history.pushState({ ...(history.state ?? {}), yobei: 'settings' }, '');
+    }
   }
 
   function openScan() {

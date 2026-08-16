@@ -6,7 +6,7 @@
 }
 
 .fog-field .fog-text {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--fog-700);
   letter-spacing: 0.06em;
 }
@@ -16,7 +16,7 @@
   left: 0;
   top: 100%;
   margin-top: 4px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--fog-400);
   white-space: nowrap;
   opacity: 0;
@@ -33,7 +33,7 @@
   padding: 3px 10px;
   border-radius: var(--r-sm);
   font-family: 'Cascadia Code', 'Cascadia Mono', 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0.06em;
   color: var(--fog-400);
   cursor: pointer;
@@ -65,7 +65,7 @@
 
 .totp-display .totp-code {
   font-family: 'Cascadia Code', 'Cascadia Mono', 'JetBrains Mono', monospace;
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 400;
   letter-spacing: 0.12em;
   color: var(--sky);
@@ -75,7 +75,7 @@
 .totp-display.copied .totp-code { color: var(--jade); }
 
 .totp-display .totp-code.totp-error {
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0.02em;
   color: var(--danger);
   word-break: break-all;
@@ -151,7 +151,7 @@
   position: relative;
   z-index: 1;
   font-family: 'Noto Serif SC', serif;
-  font-size: 34px;
+  font-size: 35px;
   font-weight: 300;
   color: var(--fog-700);
   letter-spacing: 0.15em;
@@ -192,7 +192,7 @@
 }
 
 .unlock-status {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--fog-400);
   transition: color var(--dur-med) var(--ease-fog);
   min-height: 20px;
@@ -220,7 +220,7 @@
   background: transparent;
   color: transparent;
   caret-color: transparent;
-  font-size: 16px;
+  font-size: 17px;
   cursor: text;
 }
 
@@ -285,14 +285,14 @@
 
 .setup-brand .brand-name {
   font-family: 'Noto Serif SC', serif;
-  font-size: 32px;
+  font-size: 33px;
   font-weight: 300;
   letter-spacing: 0.1em;
   color: var(--fog-800);
 }
 
 .setup-brand .brand-sub {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--fog-400);
   margin-top: 8px;
   letter-spacing: 0.05em;
@@ -300,7 +300,7 @@
 
 
 .editor-title {
-  font-size: 18px;
+  font-size: 19px;
   color: var(--fog-800);
 }
 
@@ -327,7 +327,7 @@
   border-radius: var(--r-md);
   background: transparent;
   color: var(--fog-500);
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   transition: all var(--dur-fast) var(--ease-fog);
 }
@@ -389,7 +389,7 @@
 .passkey-text {
   flex: 1;
   font-family: 'Cascadia Code', 'Cascadia Mono', 'JetBrains Mono', monospace;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--fog-700);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -419,7 +419,7 @@
   border: 1px solid var(--fog-200);
   border-radius: var(--r-md);
   background: var(--fog-100);
-  font-size: 14px;
+  font-size: 15px;
   font-family: inherit;
   color: var(--fog-800);
   cursor: pointer;
@@ -483,7 +483,7 @@
   border: none;
   border-radius: var(--r-sm);
   background: transparent;
-  font-size: 13px;
+  font-size: 14px;
   font-family: inherit;
   color: var(--fog-700);
   cursor: pointer;
@@ -540,7 +540,7 @@
   border: none;
   border-radius: var(--r-sm);
   background: transparent;
-  font-size: 13px;
+  font-size: 14px;
   font-family: inherit;
   color: var(--fog-700);
   cursor: pointer;
@@ -572,7 +572,7 @@
   gap: 8px;
   padding: 10px 16px;
   border-radius: var(--r-md);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   cursor: pointer;
   pointer-events: auto;
@@ -665,8 +665,8 @@
   border-color: var(--fog-300);
 }
 
-.credential-choice-title { font-size: 13px; font-weight: 600; }
-.credential-choice-meta { font-size: 11px; color: var(--fog-500); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.credential-choice-title { font-size: 14px; font-weight: 600; }
+.credential-choice-meta { font-size: 12px; color: var(--fog-500); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .credential-choice-new { width: 100%; margin-top: 4px; }
 
 .dialog-head {
@@ -677,7 +677,7 @@
 }
 
 .dialog-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--fog-800);
 }
@@ -692,7 +692,7 @@
 }
 
 .dialog-desc {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--fog-600);
   line-height: 1.5;
   margin: 0 0 16px;
