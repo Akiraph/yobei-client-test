@@ -97,7 +97,7 @@ interface NavItemProps {
 
 function NavItem(props: NavItemProps) {
   return (
-    <button class="nav-item nav-item-primary" aria-current={props.active ? 'page' : undefined} onClick={() => props.onClick(props.id)}>
+    <button class="nav-item" aria-current={props.active ? 'page' : undefined} onClick={() => props.onClick(props.id)}>
       <span class="nav-icon">{props.icon}</span>
       <span class="nav-label">{props.label}</span>
       <Show when={props.count !== undefined}>

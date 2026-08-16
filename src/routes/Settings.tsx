@@ -32,6 +32,7 @@ import ScanPage from '../components/ScanPage';
 import { errorMessage } from '../lib/errors';
 import { isDesktop } from '../lib/window';
 import { getVersion } from '@tauri-apps/api/app';
+import { createMediaQuery } from '../shared/useMediaQuery';
 
 const DesktopExtensionSection = __YOBEI_DESKTOP__
   ? lazy(() => import('./ExtensionSection'))
@@ -42,121 +43,177 @@ interface Props {
 }
 
 export default function Settings(props: Props) {
+  const [section, setSection] = createSignal('appearance');
   const [version, setVersion] = createSignal('');
   const desktop = __YOBEI_DESKTOP__ && isDesktop();
+  const isMobile = createMediaQuery('(max-width: 859px)');
   onMount(() => {
     if (inTauri) void getVersion().then(setVersion).catch(() => {});
   });
 
+  const sections = () => [
+    { id: 'appearance', label: t('settings.appearance') },
+    { id: 'security', label: t('settings.security') },
+    { id: 'sync', label: t('settings.sync') },
+    ...(desktop ? [{ id: 'extension', label: t('settings.extension') }] : []),
+    { id: 'data', label: t('settings.data') },
+    { id: 'general', label: t('settings.general') },
+    { id: 'about', label: t('settings.about') },
+  ];
+
+  // Mobile lays every section out flat; desktop shows only the active section.
+  const show = (id: string) => isMobile() || section() === id;
+
   return (
     <div class="settings-root fog-reveal">
-      <div class="settings-scroll">
-        <header class="settings-head">
-          <Show when={props.onClose}>
-            <button class="icon-btn settings-back" onClick={props.onClose} aria-label={t('settings.backToVault')}>
-              <IconBack size={16} />
-            </button>
-          </Show>
-          <h1 class="font-serif">{t('settings.title')}</h1>
-        </header>
+      <div class="settings-layout">
+        <Show when={!isMobile()}>
+          <aside class="settings-nav">
+            <SettingsHead onClose={props.onClose} />
+            <nav class="settings-nav-list">
+              <For each={sections()}>
+                {(item) => (
+                  <button
+                    class={`settings-nav-item${section() === item.id ? ' active' : ''}`}
+                    onClick={() => setSection(item.id)}
+                  >
+                    {item.label}
+                  </button>
+                )}
+              </For>
+            </nav>
+          </aside>
+        </Show>
 
-        <div class="settings-body">
-          <section class="settings-section">
-            <div class="settings-title">{t('settings.appearance')}</div>
-            <div class="setting-row">
-              <SettingLabel name={t('settings.theme')} desc={t('settings.themeDesc')} />
-              <div class="segmented">
-                <ThemeButton value="light" label={t('settings.light')} />
-                <ThemeButton value="dark" label={t('settings.dark')} />
-                <ThemeButton value="system" label={t('settings.system')} />
-              </div>
-            </div>
-          </section>
-
-          <section class="settings-section">
-            <div class="settings-title">{t('settings.security')}</div>
-            <ChangePassword />
-            <SettingSelect
-              name={t('settings.autoLock')}
-              desc={t('settings.autoLockDesc')}
-              value={() => state.settings.autoLockMin}
-              options={[0, 1, 5, 15, 30, 60].map((minutes) => ({
-                v: minutes,
-                label: minutes === 0 ? t('settings.never') : t('settings.minutes', { count: minutes }),
-              }))}
-              onChange={(value) => updateSettings({ autoLockMin: Number(value) })}
-            />
-            <SettingSelect
-              name={t('settings.clipboard')}
-              desc={t('settings.clipboardDesc')}
-              value={() => state.settings.clipboardSec}
-              options={[0, 10, 20, 60].map((seconds) => ({
-                v: seconds,
-                label: seconds === 0 ? t('settings.off') : t('settings.seconds', { count: seconds }),
-              }))}
-              onChange={(value) => updateSettings({ clipboardSec: Number(value) })}
-            />
-            <SettingSelect
-              name={t('settings.masterConfirm')}
-              desc={t('settings.masterConfirmDesc')}
-              value={() => state.settings.confirmDays}
-              options={[0, 14, 30].map((days) => ({
-                v: days,
-                label: days === 0 ? t('settings.off') : t('settings.days', { count: days }),
-              }))}
-              onChange={(value) => updateSettings({ confirmDays: Number(value) })}
-            />
-            <BiometricSection />
-          </section>
-
-          <section class="settings-section">
-            <div class="settings-title">{t('settings.sync')}</div>
-            <SyncSection />
-          </section>
-
-          <Show when={desktop}>
-            <section class="settings-section">
-              <div class="settings-title">{t('settings.extension')}</div>
-              <Suspense fallback={<div class="setting-note">{t('common.loading')}</div>}>
-                <DesktopExtensionSection />
-              </Suspense>
-            </section>
-          </Show>
-
-          <section class="settings-section">
-            <div class="settings-title">{t('settings.data')}</div>
-            <ImportSection />
-            <ExportSection />
-          </section>
-
-          <section class="settings-section">
-            <div class="settings-title">{t('settings.general')}</div>
-            <SettingSelect
-              name={t('settings.language')}
-              desc={t('settings.languageDesc')}
-              value={() => locale()}
-              options={locales().map((item) => ({ v: item.value, label: item.label }))}
-              onChange={(value) => setLocale(String(value))}
-            />
-            <SettingSelect
-              name={t('settings.passwordLength')}
-              desc={t('settings.passwordLengthDesc')}
-              value={() => state.settings.defaultLen}
-              options={[12, 16, 20, 24, 32].map((length) => ({ v: length, label: String(length) }))}
-              onChange={(value) => updateSettings({ defaultLen: Number(value) })}
-            />
-            <Show when={desktop}>
-              <StartupSection />
+        <main class="settings-content">
+          <div class="settings-scroll">
+            <Show when={isMobile()}>
+              <SettingsHead onClose={props.onClose} />
             </Show>
-          </section>
+            <div class="settings-body">
+              <Show when={show('appearance')}>
+                <section class="settings-section">
+                  <div class="settings-title">{t('settings.appearance')}</div>
+                  <div class="setting-row">
+                    <SettingLabel name={t('settings.theme')} desc={t('settings.themeDesc')} />
+                    <div class="segmented">
+                      <ThemeButton value="light" label={t('settings.light')} />
+                      <ThemeButton value="dark" label={t('settings.dark')} />
+                      <ThemeButton value="system" label={t('settings.system')} />
+                    </div>
+                  </div>
+                </section>
+              </Show>
 
-          <section class="settings-section">
-            <div class="settings-title">{t('settings.about')}</div>
-            <SettingRow name="Yobei" desc={t('settings.aboutDesc')} value={version() ? `v${version()}` : ''} />
-          </section>
-        </div>
+              <Show when={show('security')}>
+                <section class="settings-section">
+                  <div class="settings-title">{t('settings.security')}</div>
+                  <ChangePassword />
+                  <SettingSelect
+                    name={t('settings.autoLock')}
+                    desc={t('settings.autoLockDesc')}
+                    value={() => state.settings.autoLockMin}
+                    options={[0, 1, 5, 15, 30, 60].map((minutes) => ({
+                      v: minutes,
+                      label: minutes === 0 ? t('settings.never') : t('settings.minutes', { count: minutes }),
+                    }))}
+                    onChange={(value) => updateSettings({ autoLockMin: Number(value) })}
+                  />
+                  <SettingSelect
+                    name={t('settings.clipboard')}
+                    desc={t('settings.clipboardDesc')}
+                    value={() => state.settings.clipboardSec}
+                    options={[0, 10, 20, 60].map((seconds) => ({
+                      v: seconds,
+                      label: seconds === 0 ? t('settings.off') : t('settings.seconds', { count: seconds }),
+                    }))}
+                    onChange={(value) => updateSettings({ clipboardSec: Number(value) })}
+                  />
+                  <SettingSelect
+                    name={t('settings.masterConfirm')}
+                    desc={t('settings.masterConfirmDesc')}
+                    value={() => state.settings.confirmDays}
+                    options={[0, 14, 30].map((days) => ({
+                      v: days,
+                      label: days === 0 ? t('settings.off') : t('settings.days', { count: days }),
+                    }))}
+                    onChange={(value) => updateSettings({ confirmDays: Number(value) })}
+                  />
+                  <BiometricSection />
+                </section>
+              </Show>
+
+              <Show when={show('sync')}>
+                <section class="settings-section">
+                  <div class="settings-title">{t('settings.sync')}</div>
+                  <SyncSection />
+                </section>
+              </Show>
+
+              <Show when={desktop && show('extension')}>
+                <section class="settings-section">
+                  <div class="settings-title">{t('settings.extension')}</div>
+                  <Suspense fallback={<div class="setting-note">{t('common.loading')}</div>}>
+                    <DesktopExtensionSection />
+                  </Suspense>
+                </section>
+              </Show>
+
+              <Show when={show('data')}>
+                <section class="settings-section">
+                  <div class="settings-title">{t('settings.data')}</div>
+                  <ImportSection />
+                  <ExportSection />
+                </section>
+              </Show>
+
+              <Show when={show('general')}>
+                <section class="settings-section">
+                  <div class="settings-title">{t('settings.general')}</div>
+                  <SettingSelect
+                    name={t('settings.language')}
+                    desc={t('settings.languageDesc')}
+                    value={() => locale()}
+                    options={locales().map((item) => ({ v: item.value, label: item.label }))}
+                    onChange={(value) => setLocale(String(value))}
+                  />
+                  <SettingSelect
+                    name={t('settings.passwordLength')}
+                    desc={t('settings.passwordLengthDesc')}
+                    value={() => state.settings.defaultLen}
+                    options={[12, 16, 20, 24, 32].map((length) => ({ v: length, label: String(length) }))}
+                    onChange={(value) => updateSettings({ defaultLen: Number(value) })}
+                  />
+                  <Show when={desktop}>
+                    <StartupSection />
+                  </Show>
+                </section>
+              </Show>
+
+              <Show when={show('about')}>
+                <section class="settings-section">
+                  <div class="settings-title">{t('settings.about')}</div>
+                  <SettingRow name="Yobei" desc={t('settings.aboutDesc')} value={version() ? `v${version()}` : ''} />
+                </section>
+              </Show>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
+  );
+}
+
+function SettingsHead(props: { onClose?: () => void }) {
+  return (
+    <header class="settings-head">
+      <Show when={props.onClose}>
+        <button class="icon-btn settings-back" onClick={props.onClose} aria-label={t('settings.backToVault')}>
+          <IconBack size={16} />
+        </button>
+      </Show>
+      <h1 class="font-serif">{t('settings.title')}</h1>
+    </header>
   );
 }
 

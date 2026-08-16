@@ -122,15 +122,15 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 8px 10px;
-  border-radius: var(--r-sm);
-  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  font-size: 14px;
   font-weight: 400;
   color: var(--fog-500);
   cursor: pointer;
   transition: all var(--dur-fast) var(--ease-fog);
   text-align: left;
-  min-height: 40px;
+  min-height: var(--touch-min);
   outline: none;
 }
 
@@ -147,16 +147,7 @@
   box-shadow: inset 0 0 0 1px var(--fog-300);
 }
 
-/* Top nav items (全部项目 / 笔记) reuse the settings-sidebar button sizing and
-   its active glass state, per the settings-nav look. */
-.nav-item-primary {
-  padding: 10px 14px;
-  border-radius: var(--r-md);
-  font-size: 14px;
-  min-height: var(--touch-min);
-}
-
-.nav-item-primary[aria-current="page"] {
+.nav-item[aria-current="page"] {
   background: rgba(255, 255, 255, 0.5);
   color: var(--fog-800);
   font-weight: 500;
@@ -714,8 +705,33 @@
   overflow: hidden;
   position: relative;
   z-index: 1;
+}
+
+.settings-layout {
+  display: grid;
+  grid-template-columns: 224px minmax(0, 1fr);
+  height: 100%;
+  width: 100%;
+}
+
+.settings-nav {
+  width: 220px;
+  flex-shrink: 0;
+  padding: 40px 24px calc(24px + env(safe-area-inset-bottom, 0px)) 32px;
   display: flex;
   flex-direction: column;
+  gap: 32px;
+  overflow-y: auto;
+  border-right: 1px solid var(--fog-200);
+}
+
+.settings-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .settings-scroll {
@@ -729,10 +745,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 28px 24px 16px;
 }
 
 .settings-head h1 {
@@ -748,11 +760,41 @@
   height: 30px;
 }
 
+.settings-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-nav-item {
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--fog-500);
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-fog);
+  min-height: var(--touch-min);
+}
+
+.settings-nav-item:hover {
+  background: var(--fog-150);
+  color: var(--fog-800);
+}
+
+.settings-nav-item.active {
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--fog-800);
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+}
+
 .settings-body {
   width: 100%;
   max-width: 720px;
   margin: 0 auto;
-  padding: 0 24px calc(48px + env(safe-area-inset-bottom, 0px));
+  padding: 36px 24px calc(48px + env(safe-area-inset-bottom, 0px));
 }
 
 .settings-section { margin-bottom: 40px; }
@@ -832,15 +874,6 @@
 .setting-row-stack > :not(.setting-label):not(.setting-control),
 .setting-row-stack > .setting-label-spaced {
   grid-column: 1 / -1;
-}
-
-.setting-row-stack .setting-control > .btn,
-.setting-row-stack .setting-inline > .btn,
-.device-row > .btn {
-  width: 128px;
-  min-width: 128px;
-  flex: 0 0 128px;
-  justify-content: center;
 }
 
 .setting-select {
@@ -1146,6 +1179,10 @@
     background: transparent;
   }
 
+  .settings-layout {
+    display: flex;
+    flex-direction: column;
+  }
   .settings-head { padding: max(16px, env(safe-area-inset-top, 0px)) 16px 12px; }
   .settings-head h1 { font-size: 24px; }
   .settings-body { padding: 0 16px calc(32px + env(safe-area-inset-bottom, 0px)); }
