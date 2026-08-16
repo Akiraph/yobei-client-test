@@ -1,17 +1,16 @@
-import { For, Show, Suspense, createMemo, createSignal, lazy, onCleanup, onMount } from 'solid-js';
-import { computeTotp } from '../../../lib/ipc';
+import { For, Show, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
+import { computeTotp, captureQrFromScreen } from '../../../lib/ipc';
 import { copyText } from '../../../lib/clipboard';
 import { relativeTime } from '../../../lib/format';
-import { notifyError, notifyOk } from '../../../lib/notify';
+import { notifyError } from '../../../lib/notify';
 import { errorMessage } from '../../../lib/errors';
-import { IconSearch, IconPlus, IconScan, IconMenu, IconRefresh } from '../../../components/Icon';
+import { IconSearch, IconPlus, IconScan, IconMenu, IconRefresh, IconUpload, IconCamera } from '../../../components/Icon';
 import type { VaultItem } from '../../../lib/types';
 import { t } from '../../../lib/i18n';
-import { hideDialog, showDialog } from '../../../lib/dialog';
+import { decodeQrImage } from '../../../lib/qr';
 import SiteIcon from '../../../components/SiteIcon';
 import type { VaultFeature } from '../model';
-
-const QrScanner = lazy(() => import('../../../components/QrScanner').then(({ QrScanner: component }) => ({ default: component })));
+import { addTotpFromUri } from '../totp';
 
 interface Props {
   feature: VaultFeature;
@@ -27,6 +26,7 @@ export default function ItemList(props: Props) {
   let menuRef: HTMLDivElement | undefined;
   let btnRef: HTMLButtonElement | undefined;
   let listRef: HTMLDivElement | undefined;
+  let filePicker: HTMLInputElement | undefined;
   let pullStartY = 0;
   let pulling = false;
 
@@ -99,52 +99,40 @@ export default function ItemList(props: Props) {
     setPullDistance(0);
   }
 
-  function handleScanAndAdd() {
-    setShowNewMenu(false);
-    showDialog(
-      t('list.scan'),
-      <Suspense fallback={<div class="setting-note">{t('common.loading')}</div>}>
-        <QrScanner
-          label={t('list.scan')}
-          onResult={(uri) => { hideDialog(); void addTotp(uri); }}
-          onError={notifyError}
-        />
-      </Suspense>,
-    );
-  }
-
-  async function addTotp(uri: string) {
-    const parsed = parseOtpauthUri(uri);
-    if (!parsed) {
-      notifyError(t('error.invalidTotp'));
-      return;
-    }
-    try {
-      const candidates = (await Promise.all(
-        props.feature.items()
-          .filter((item) => item.type === 'login')
-          .map(async (item) => {
-            const data = await props.feature.itemContentFor(item.id);
-            return props.feature.accountMatches(item, data, parsed.account, parsed.service, parsed.title) ? item : null;
-          }),
-      )).filter((item): item is VaultItem => item !== null);
-      if (candidates.length === 0) {
-        await runTotpAction(() => createTotpItem(props.feature, parsed));
-        return;
-      }
-      if (candidates.length === 1) {
-        await runTotpAction(() => updateTotpItem(props.feature, candidates[0], parsed));
-        return;
-      }
-      showCredentialChoice(props.feature, parsed, candidates);
-    } catch (error) {
-      notifyError(errorMessage(error, 'operation_failed'));
-    }
-  }
-
   function handleManualAdd() {
     setShowNewMenu(false);
     props.onNew?.();
+  }
+
+  function handleScanAdd() {
+    setShowNewMenu(false);
+    props.feature.openScan();
+  }
+
+  function handleUploadAdd() {
+    setShowNewMenu(false);
+    filePicker?.click();
+  }
+
+  async function onFilePicked(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    try {
+      await addTotpFromUri(await decodeQrImage(file));
+    } catch {
+      notifyError(t('error.qrImageFailed'));
+    }
+  }
+
+  async function handleScreenshotAdd() {
+    setShowNewMenu(false);
+    try {
+      await addTotpFromUri(await captureQrFromScreen());
+    } catch (error) {
+      notifyError(errorMessage(error, 'operation_failed'));
+    }
   }
 
   function choose(id: string) {
@@ -180,14 +168,28 @@ export default function ItemList(props: Props) {
                 <IconPlus size={14} />
                 {t('list.manual')}
               </button>
-              <button class="new-btn-option" onClick={handleScanAndAdd}>
-                <IconScan size={14} />
-                {t('list.scan')}
+              <Show when={!__YOBEI_DESKTOP__}>
+                <button class="new-btn-option" onClick={handleScanAdd}>
+                  <IconScan size={14} />
+                  {t('list.scan')}
+                </button>
+              </Show>
+              <button class="new-btn-option" onClick={handleUploadAdd}>
+                <IconUpload size={14} />
+                {t('qr.uploadImage')}
               </button>
+              <Show when={__YOBEI_DESKTOP__}>
+                <button class="new-btn-option" onClick={() => void handleScreenshotAdd()}>
+                  <IconCamera size={14} />
+                  {t('list.screenshot')}
+                </button>
+              </Show>
             </div>
           </Show>
         </div>
       </div>
+
+      <input ref={filePicker} class="qr-file-input" type="file" accept="image/*" onChange={onFilePicked} />
 
       <div
         class="item-list"
@@ -232,75 +234,6 @@ export default function ItemList(props: Props) {
         </div>
       </div>
     </div>
-  );
-}
-
-type ParsedTotp = { title: string; secret: string; account?: string; service?: string };
-
-async function runTotpAction(action: () => Promise<void>) {
-  try {
-    await action();
-  } catch (error) {
-    notifyError(errorMessage(error, 'operation_failed'));
-  }
-}
-
-function totpCredentialPatch(parsed: ParsedTotp) {
-  return {
-    totp: parsed.secret,
-    ...(parsed.account ? { username: parsed.account } : {}),
-  };
-}
-
-async function createTotpItem(feature: VaultFeature, parsed: ParsedTotp) {
-  await feature.saveItem({ type: 'login', data: { title: parsed.title, totp: parsed.secret, username: parsed.account } });
-  notifyOk(t('list.totpAdded', { title: parsed.title }));
-}
-
-async function updateTotpItem(feature: VaultFeature, item: VaultItem, parsed: ParsedTotp) {
-  await feature.saveAccountCredential(item, totpCredentialPatch(parsed));
-  notifyOk(t('list.totpUpdated', { title: item.title }));
-}
-
-function parseOtpauthUri(uri: string): ParsedTotp | null {
-  try {
-    const url = new URL(uri);
-    if (url.protocol !== 'otpauth:' || !url.pathname.includes('/')) return null;
-    const secret = url.searchParams.get('secret');
-    if (!secret) return null;
-    const path = decodeURIComponent(url.pathname.slice(1));
-    const label = path.includes('/') ? path.split('/').slice(1).join('/') : path;
-    const title = url.searchParams.get('issuer') || label.split(':')[0] || label;
-    const account = label.includes(':') ? label.split(':').slice(1).join(':') : undefined;
-    return { title, secret, account, service: url.searchParams.get('issuer') || title };
-  } catch {
-    return null;
-  }
-}
-
-function showCredentialChoice(feature: VaultFeature, parsed: ParsedTotp, candidates: VaultItem[]) {
-  showDialog(
-    t('list.chooseAccountTitle'),
-    <div class="credential-choice-list">
-      <p class="dialog-desc">{t('list.chooseAccountHint')}</p>
-      <For each={candidates}>
-        {(item) => (
-          <button class="credential-choice" onClick={() => {
-            hideDialog();
-            void runTotpAction(() => updateTotpItem(feature, item, parsed));
-          }}>
-            <span class="credential-choice-title">{item.title}</span>
-            <span class="credential-choice-meta">{item.username || t('list.noUsername')}{item.url ? ` · ${item.url}` : ''}</span>
-          </button>
-        )}
-      </For>
-      <button class="btn btn-primary credential-choice-new" onClick={() => {
-        hideDialog();
-        void runTotpAction(() => createTotpItem(feature, parsed));
-      }}>
-        {t('list.createAccount')}
-      </button>
-    </div>,
   );
 }
 

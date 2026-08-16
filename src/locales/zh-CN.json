@@ -101,6 +101,7 @@
     "list.new": "新建",
     "list.manual": "手动添加",
     "list.scan": "扫码添加",
+    "list.screenshot": "截图添加",
     "list.empty": "没有匹配的条目",
     "list.note": "安全笔记",
     "list.passkey": "通行密钥",

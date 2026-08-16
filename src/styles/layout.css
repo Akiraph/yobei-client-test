@@ -100,7 +100,12 @@
   min-height: 0;
 }
 
-.sidebar-section { margin-bottom: 28px; }
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 28px;
+}
 
 .sidebar-title {
   font-size: 10px;
@@ -124,9 +129,9 @@
   color: var(--fog-500);
   cursor: pointer;
   transition: all var(--dur-fast) var(--ease-fog);
-  margin-bottom: 1px;
   text-align: left;
   min-height: 40px;
+  outline: none;
 }
 
 .nav-item:hover,
@@ -178,7 +183,8 @@
 .sidebar-footer {
   margin-top: auto;
   padding-top: 16px;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 2px;
 }
 
@@ -567,6 +573,85 @@
 .qr-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .qr-actions .btn, .transfer-qr-wrap .btn { display: inline-flex; align-items: center; gap: 6px; }
 .qr-file-input { display: none; }
+
+/* ── 扫码页:全屏相机 + 方形取景框 + 上下移动扫描线 ─────────── */
+.scan-page {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: #0b0f14;
+  overflow: hidden;
+}
+
+.scan-camera {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.scan-frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(72vw, 300px);
+  aspect-ratio: 1;
+  pointer-events: none;
+}
+
+.scan-corner {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--jade);
+}
+.scan-corner.tl { top: 0; left: 0; border-right: none; border-bottom: none; border-top-left-radius: 10px; }
+.scan-corner.tr { top: 0; right: 0; border-left: none; border-bottom: none; border-top-right-radius: 10px; }
+.scan-corner.bl { bottom: 0; left: 0; border-right: none; border-top: none; border-bottom-left-radius: 10px; }
+.scan-corner.br { bottom: 0; right: 0; border-left: none; border-top: none; border-bottom-right-radius: 10px; }
+
+.scan-line {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  height: 2px;
+  background: var(--jade);
+  box-shadow: 0 0 10px var(--jade);
+  animation: scan-line-sweep 2.4s ease-in-out infinite;
+}
+
+@keyframes scan-line-sweep {
+  0%, 100% { top: 8%; }
+  50%      { top: 90%; }
+}
+
+.scan-topbar {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  left: 12px;
+  z-index: 1;
+}
+
+.scan-back {
+  width: 40px;
+  height: 40px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  backdrop-filter: blur(8px);
+}
+
+.scan-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 44px);
+  text-align: center;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+}
 .device-list { display: grid; gap: 8px; width: 100%; }
 .device-row { display: flex; min-height: 46px; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); }
 

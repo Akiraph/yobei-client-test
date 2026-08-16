@@ -26,6 +26,7 @@ import {
   Upload,
   Download,
   Menu,
+  Camera,
   type LucideProps,
 } from 'lucide-solid';
 
@@ -57,3 +58,4 @@ export const IconScan = (p: LucideProps) => <ScanLine {...dp(p)} />;
 export const IconUpload = (p: LucideProps) => <Upload {...dp(p)} />;
 export const IconDownload = (p: LucideProps) => <Download {...dp(p)} />;
 export const IconMenu = (p: LucideProps) => <Menu {...dp(p)} />;
+export const IconCamera = (p: LucideProps) => <Camera {...dp(p)} />;

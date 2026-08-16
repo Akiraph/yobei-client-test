@@ -101,6 +101,7 @@
     "list.new": "New",
     "list.manual": "Add manually",
     "list.scan": "Scan QR code",
+    "list.screenshot": "Add from screenshot",
     "list.empty": "No matching items",
     "list.note": "Secure note",
     "list.passkey": "Passkey",

@@ -29,6 +29,7 @@ export function createVaultFeature() {
   const [pane, setPane] = createSignal<Pane>('list');
   const [editing, setEditing] = createSignal<EditState>(null);
   const [sidebarOpen, setSidebarOpen] = createSignal(false);
+  const [scanning, setScanning] = createSignal(false);
   let closingSidebarViaHistory = false;
 
   createEffect(() => {
@@ -156,6 +157,14 @@ export function createVaultFeature() {
     toggleSettings(true);
   }
 
+  function openScan() {
+    setScanning(true);
+  }
+
+  function closeScan() {
+    setScanning(false);
+  }
+
   return {
     isMobile,
     items: () => state.items,
@@ -174,6 +183,9 @@ export function createVaultFeature() {
     runSync,
     navigate,
     openSettings,
+    scanning,
+    openScan,
+    closeScan,
     lock,
     pane,
     editing,

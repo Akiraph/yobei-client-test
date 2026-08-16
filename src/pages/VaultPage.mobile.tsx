@@ -2,6 +2,7 @@ import { lazy, Show, Suspense } from 'solid-js';
 import Sidebar from '../features/vault/ui/Sidebar';
 import ItemList from '../features/vault/ui/ItemList';
 import VaultDetailPane from '../features/vault/ui/VaultDetailPane';
+import ScanPage from '../features/vault/ui/ScanPage';
 import Backdrop from '../shared/ui/Backdrop';
 import type { VaultFeature } from '../features/vault/model';
 
@@ -57,13 +58,17 @@ export default function VaultPageMobile(props: Props) {
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchEnd}
     >
-      <Show when={props.feature.settingsOpen()}>
+      <Show when={props.feature.scanning()}>
+        <ScanPage feature={props.feature} />
+      </Show>
+
+      <Show when={!props.feature.scanning() && props.feature.settingsOpen()}>
         <Suspense fallback={null}>
           <Settings onClose={props.feature.closeSettings} />
         </Suspense>
       </Show>
 
-      <Show when={!props.feature.settingsOpen()}>
+      <Show when={!props.feature.scanning() && !props.feature.settingsOpen()}>
         <Backdrop class={`sidebar-scrim${props.feature.sidebarOpen() ? ' open' : ''}`} onPointerDown={props.feature.closeSidebar} />
         <aside class={`vault-sidebar drawer${props.feature.sidebarOpen() ? ' open' : ''}`} aria-hidden={!props.feature.sidebarOpen()}>
           <Sidebar feature={props.feature} onNavigate={props.feature.closeSidebar} />
