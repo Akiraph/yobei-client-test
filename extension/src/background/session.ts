@@ -760,6 +760,12 @@ export async function createPendingPasswordCapture(captureId: string, title: str
   return result;
 }
 
+export async function discardPendingPasswordCapture(captureId: string): Promise<void> {
+  if (!captureId) throw new Error('invalid_input');
+  const pending = await readPendingPasswordCaptures();
+  await writePendingPasswordCaptures(pending.filter((item) => item.id !== captureId));
+}
+
 export async function savePendingRecoveryCapture(captureId: string, itemId: string): Promise<CaptureResult> {
   const pending = await readPendingRecoveryCaptures();
   const capture = pending.find((item) => item.id === captureId);

@@ -4,5 +4,44 @@
   },
   "extensionDescription": {
     "message": "Encrypted password filling for the browser"
+  },
+  "content_savePasswordTitle": {
+    "message": "Save this password to Yobei?"
+  },
+  "content_save": {
+    "message": "Save"
+  },
+  "content_saveNew": {
+    "message": "New item"
+  },
+  "content_dontSave": {
+    "message": "Don't save"
+  },
+  "content_saved": {
+    "message": "Saved"
+  },
+  "content_matchBadge": {
+    "message": "Yobei · $1"
+  },
+  "content_generate": {
+    "message": "Generate"
+  },
+  "content_regenerate": {
+    "message": "Regenerate"
+  },
+  "content_copy": {
+    "message": "Copy"
+  },
+  "content_use": {
+    "message": "Use"
+  },
+  "content_random": {
+    "message": "Random"
+  },
+  "content_passphrase": {
+    "message": "Passphrase"
+  },
+  "content_pin": {
+    "message": "PIN"
   }
 }

@@ -14,6 +14,7 @@ import {
   savePendingPasswordCapture,
   createPendingRecoveryCapture,
   createPendingPasswordCapture,
+  discardPendingPasswordCapture,
   getSnapshot,
   matchesForHost,
   type SecretField,
@@ -174,6 +175,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       const title = typeof message.title === 'string' ? message.title : '';
       createPendingPasswordCapture(captureId, title)
         .then((result) => sendResponse({ ok: true, ...result }))
+        .catch((error) => sendResponse(failure(error, 'operation_failed')));
+      return true;
+    }
+    case 'discard_pending_password': {
+      const captureId = typeof message.captureId === 'string' ? message.captureId : '';
+      discardPendingPasswordCapture(captureId)
+        .then(() => sendResponse({ ok: true }))
         .catch((error) => sendResponse(failure(error, 'operation_failed')));
       return true;
     }

@@ -191,6 +191,9 @@ const C = {
   let overlay: HTMLDivElement | null = null;
   let activeField: HTMLInputElement | null = null;
   let totpTimer: number | undefined;
+  let autofillMatches: MatchItem[] = [];
+  let autofillRows: HTMLElement[] = [];
+  let autofillIndex = -1;
 
   function ensureOverlay(): HTMLDivElement {
     if (overlay) return overlay;
@@ -208,6 +211,9 @@ const C = {
       totpTimer = undefined;
     }
     activeField = null;
+    autofillMatches = [];
+    autofillRows = [];
+    autofillIndex = -1;
   }
 
   function positionOverlay(field: HTMLInputElement): void {
@@ -233,6 +239,14 @@ const C = {
     return node;
   }
 
+  function msg(key: string, substitutions?: string[]): string {
+    try {
+      return chrome.i18n.getMessage(key, substitutions) || key;
+    } catch {
+      return key;
+    }
+  }
+
   async function requestMatches(): Promise<MatchItem[]> {
     try {
       const response = await chrome.runtime.sendMessage({ type: 'get_matches', url: location.href });
@@ -245,24 +259,52 @@ const C = {
     return [];
   }
 
+  function setAutofillIndex(index: number): void {
+    autofillIndex = index;
+    autofillRows.forEach((row, i) => {
+      row.style.background = i === index ? C.surfaceHover : 'transparent';
+    });
+  }
+
+  function onAutofillKeydown(event: KeyboardEvent): void {
+    if (autofillRows.length === 0) return;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setAutofillIndex((autofillIndex + 1) % autofillRows.length);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setAutofillIndex((autofillIndex - 1 + autofillRows.length) % autofillRows.length);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const match = autofillMatches[autofillIndex];
+      if (match) void fillMatch(match);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      hideOverlay();
+    }
+  }
+
   async function showAutofillMenu(field: HTMLInputElement): Promise<void> {
     const matches = await requestMatches();
     if (matches.length === 0) return;
     activeField = field;
+    autofillMatches = matches;
+    autofillRows = [];
+    autofillIndex = 0;
 
     const root = ensureOverlay();
     root.innerHTML = '';
     const list = el('div', `background:${C.surface};border:1px solid ${C.border};border-radius:12px;box-shadow:${C.shadow};padding:6px;min-width:280px;max-width:340px;font-family:${C.font};`);
-    for (const match of matches) {
-      const row = el('button', `display:flex;align-items:center;gap:10px;width:100%;border:none;background:transparent;padding:9px 12px;border-radius:8px;cursor:pointer;text-align:left;font-family:${C.font};`);
-      row.addEventListener('mouseenter', () => { row.style.background = C.surfaceHover; });
-      row.addEventListener('mouseleave', () => { row.style.background = 'transparent'; });
+    matches.forEach((match, index) => {
+      const row = el('button', `display:flex;align-items:center;gap:10px;width:100%;border:none;background:${index === autofillIndex ? C.surfaceHover : 'transparent'};padding:9px 12px;border-radius:8px;cursor:pointer;text-align:left;font-family:${C.font};`);
+      row.addEventListener('mouseenter', () => { setAutofillIndex(index); });
       row.append(el('span', `flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:600;color:${C.text};`, match.title));
       if (match.username) row.append(el('span', `max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:${C.muted};`, match.username));
       if (match.hasTotp) row.append(el('span', `font-size:11px;color:${C.accentText};background:${C.surfaceHover};padding:2px 7px;border-radius:999px;`, '2FA'));
       row.addEventListener('click', () => { void fillMatch(match); });
       list.append(row);
-    }
+      autofillRows.push(row);
+    });
     root.append(list);
     positionOverlay(field);
   }
@@ -359,6 +401,7 @@ const C = {
     if (overlay && event.target instanceof Node && !overlay.contains(event.target)) hideOverlay();
   }, true);
   document.addEventListener('blur', () => { if (activeField) hideOverlay(); }, true);
+  document.addEventListener('keydown', onAutofillKeydown, true);
   window.addEventListener('scroll', hideOverlay, true);
   window.addEventListener('resize', hideOverlay);
 
@@ -367,51 +410,98 @@ const C = {
   let lastCapturedRecovery = '';
   let lastCapturedPassword = '';
   let captureTimer: number | undefined;
-  let passwordSuggestion: HTMLButtonElement | undefined;
-  let passwordSuggestionField: HTMLInputElement | undefined;
+  let generatorMode: 'random' | 'passphrase' | 'pin' = 'random';
 
-  function positionPasswordSuggestion(): void {
-    if (!passwordSuggestion || !passwordSuggestionField) return;
-    const rect = passwordSuggestionField.getBoundingClientRect();
-    passwordSuggestion.style.left = `${Math.max(8, rect.right - 80)}px`;
-    passwordSuggestion.style.top = `${Math.max(8, rect.top - 34)}px`;
+  const GENERATOR_MODE_LABELS: Record<'random' | 'passphrase' | 'pin', string> = {
+    random: 'content_random',
+    passphrase: 'content_passphrase',
+    pin: 'content_pin',
+  };
+
+  function generatorOptions(mode: 'random' | 'passphrase' | 'pin'): string {
+    return JSON.stringify(
+      mode === 'random'
+        ? { length: 16, useLower: true, useUpper: true, useDigits: true, useSymbols: true }
+        : mode === 'passphrase'
+          ? { words: 4, separator: '-' }
+          : { length: 6 },
+    );
   }
 
-  function removePasswordSuggestion(): void {
-    passwordSuggestion?.remove();
-    passwordSuggestion = undefined;
-    passwordSuggestionField = undefined;
-  }
-
-  async function suggestPassword(field: HTMLInputElement): Promise<void> {
-    if (passwordSuggestion && passwordSuggestionField === field) {
-      positionPasswordSuggestion();
-      return;
-    }
-    removePasswordSuggestion();
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = 'Yobei';
-    button.style.cssText = `position:fixed;z-index:2147483647;padding:6px 10px;border:1px solid ${C.accent};border-radius:8px;background:${C.surface};color:${C.accentText};font:12px ${C.font};cursor:pointer;box-shadow:${C.shadow};`;
-    passwordSuggestionField = field;
-    positionPasswordSuggestion();
-    button.addEventListener('click', async () => {
+  async function generatePasswordValue(mode: 'random' | 'passphrase' | 'pin'): Promise<string> {
+    try {
       const response = await chrome.runtime.sendMessage({
         type: 'generate_password',
-        mode: 'random',
-        opts: JSON.stringify({ length: 20, useLower: true, useUpper: true, useDigits: true, useSymbols: true }),
+        mode,
+        opts: generatorOptions(mode),
       });
-      if (response?.ok && typeof response.password === 'string') {
-        setField(field, response.password);
-        field.focus();
-      }
-    });
-    document.documentElement.append(button);
-    passwordSuggestion = button;
-    positionPasswordSuggestion();
+      if (response?.ok && typeof response.password === 'string') return response.password;
+    } catch {
+      // bridge unavailable — leave empty
+    }
+    return '';
   }
 
-  function capturePasswordFromPage(): void {
+  function smallBtn(label: string, color: string, borderColor: string): HTMLElement {
+    const btn = el('button', `flex:1;border:1px solid ${borderColor};border-radius:8px;padding:6px 8px;background:transparent;font-size:12px;color:${color};cursor:pointer;font-family:${C.font};`);
+    btn.textContent = label;
+    return btn;
+  }
+
+  function useGeneratedPassword(field: HTMLInputElement, value: string): void {
+    hideOverlay();
+    if (!value) return;
+    setField(field, value);
+    field.focus();
+  }
+
+  async function copyGenerated(value: string): Promise<void> {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      // ignore
+    }
+  }
+
+  async function regenerateGenerated(valueEl: HTMLElement): Promise<void> {
+    const password = await generatePasswordValue(generatorMode);
+    if (password) valueEl.textContent = password;
+  }
+
+  async function showGeneratorMenu(field: HTMLInputElement): Promise<void> {
+    const root = ensureOverlay();
+    root.innerHTML = '';
+    const box = el('div', `background:${C.surface};border:1px solid ${C.border};border-radius:12px;box-shadow:${C.shadow};padding:12px 14px;min-width:300px;max-width:360px;font-family:${C.font};`);
+
+    const valueEl = el('div', `font-family:${C.mono};font-size:16px;font-weight:600;letter-spacing:0.03em;color:${C.text};word-break:break-all;min-height:22px;`, msg('content_generate'));
+    box.append(valueEl);
+
+    const actions = el('div', `display:flex;gap:8px;margin-top:10px;`);
+    const useBtn = smallBtn(msg('content_use'), C.accentText, C.accent);
+    useBtn.addEventListener('click', () => { useGeneratedPassword(field, valueEl.textContent ?? ''); });
+    const copyBtn = smallBtn(msg('content_copy'), C.muted, C.border);
+    copyBtn.addEventListener('click', () => { void copyGenerated(valueEl.textContent ?? ''); });
+    const regenBtn = smallBtn(msg('content_regenerate'), C.muted, C.border);
+    regenBtn.addEventListener('click', () => { void regenerateGenerated(valueEl); });
+    actions.append(useBtn, copyBtn, regenBtn);
+    box.append(actions);
+
+    const modes = el('div', `display:flex;gap:6px;margin-top:8px;`);
+    (['random', 'passphrase', 'pin'] as const).forEach((mode) => {
+      const active = generatorMode === mode;
+      const btn = el('button', `border:1px solid ${active ? C.accent : C.border};border-radius:999px;padding:3px 10px;background:${active ? C.surfaceHover : 'transparent'};font-size:11px;color:${active ? C.accentText : C.muted};cursor:pointer;font-family:${C.font};`, msg(GENERATOR_MODE_LABELS[mode]));
+      btn.addEventListener('click', () => { generatorMode = mode; void regenerateGenerated(valueEl); });
+      modes.append(btn);
+    });
+    box.append(modes);
+
+    root.append(box);
+    positionOverlay(field);
+    void regenerateGenerated(valueEl);
+  }
+
+  async function capturePasswordFromPage(): Promise<void> {
     const field = findRegistrationPasswordField();
     const password = field?.value ?? '';
     if (!password) return;
@@ -419,12 +509,107 @@ const C = {
     const captureKey = `${location.href} ${username} ${password}`;
     if (captureKey === lastCapturedPassword) return;
     lastCapturedPassword = captureKey;
-    void chrome.runtime.sendMessage({
-      type: 'capture_password',
-      password,
-      username,
-      url: location.href,
-    });
+
+    let response: CaptureResponse | undefined;
+    try {
+      response = await chrome.runtime.sendMessage({
+        type: 'capture_password',
+        password,
+        username,
+        url: location.href,
+      });
+    } catch {
+      return;
+    }
+    if (response?.ok !== true || response.matched !== false || !response.pendingId) return;
+    showSavePrompt(field, response.pendingId, response.candidates ?? []);
+  }
+
+  interface SaveCandidate {
+    id: string;
+    title?: string;
+    username?: string;
+    url?: string;
+  }
+
+  interface CaptureResponse {
+    ok?: boolean;
+    matched?: boolean;
+    pendingId?: string;
+    candidates?: SaveCandidate[];
+  }
+
+  function promptButton(label: string, username: string | undefined, onClick: () => void, accent = false): HTMLElement {
+    const row = el('button', `display:flex;align-items:center;gap:10px;width:100%;border:none;background:transparent;padding:8px 12px;border-radius:8px;cursor:pointer;text-align:left;font-family:${C.font};`);
+    row.addEventListener('mouseenter', () => { row.style.background = C.surfaceHover; });
+    row.addEventListener('mouseleave', () => { row.style.background = 'transparent'; });
+    row.append(el('span', `flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:${accent ? 600 : 400};color:${accent ? C.accentText : C.muted};`, label));
+    if (username) row.append(el('span', `max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:${C.muted};`, username));
+    row.addEventListener('click', onClick);
+    return row;
+  }
+
+  function showSavePrompt(field: HTMLInputElement | null, pendingId: string, candidates: SaveCandidate[]): void {
+    activeField = null;
+    const root = ensureOverlay();
+    root.innerHTML = '';
+    const box = el('div', `background:${C.surface};border:1px solid ${C.border};border-radius:12px;box-shadow:${C.shadow};padding:10px 12px;min-width:280px;max-width:340px;font-family:${C.font};`);
+    box.append(el('div', `font-size:13px;font-weight:600;color:${C.text};padding:2px 4px 8px;`, msg('content_savePasswordTitle')));
+
+    if (candidates.length > 0) {
+      for (const candidate of candidates.slice(0, 4)) {
+        box.append(promptButton(
+          candidate.title ?? msg('content_saveNew'),
+          candidate.username,
+          () => { void saveCapturedPassword(pendingId, candidate.id); },
+          true,
+        ));
+      }
+      box.append(promptButton(`+ ${msg('content_saveNew')}`, undefined, () => { void saveCapturedPassword(pendingId); }, true));
+    } else {
+      box.append(promptButton(msg('content_save'), undefined, () => { void saveCapturedPassword(pendingId); }, true));
+    }
+    box.append(promptButton(msg('content_dontSave'), undefined, () => { void discardCapturedPassword(pendingId); }));
+
+    root.append(box);
+    if (field) {
+      positionOverlay(field);
+    } else {
+      root.style.left = '50%';
+      root.style.top = '80px';
+      root.style.transform = 'translateX(-50%)';
+      root.style.display = 'block';
+    }
+  }
+
+  async function saveCapturedPassword(pendingId: string, itemId?: string): Promise<void> {
+    let response: { ok?: boolean } | undefined;
+    try {
+      response = await chrome.runtime.sendMessage(
+        itemId
+          ? { type: 'save_pending_password', captureId: pendingId, itemId }
+          : { type: 'create_pending_password', captureId: pendingId, title: location.hostname },
+      );
+    } catch {
+      return;
+    }
+    if (response?.ok) {
+      const root = overlay;
+      if (root) {
+        root.innerHTML = '';
+        root.append(el('div', `background:${C.surface};border:1px solid ${C.border};border-radius:12px;box-shadow:${C.shadow};padding:10px 14px;color:${C.accentText};font-size:13px;font-family:${C.font};`, msg('content_saved')));
+        window.setTimeout(hideOverlay, 1500);
+      }
+    }
+  }
+
+  async function discardCapturedPassword(pendingId: string): Promise<void> {
+    hideOverlay();
+    try {
+      await chrome.runtime.sendMessage({ type: 'discard_pending_password', captureId: pendingId });
+    } catch {
+      // The capture stays pending and remains available from the popup.
+    }
   }
 
   function captureRecoveryFromPage(): void {
@@ -443,6 +628,60 @@ const C = {
     });
   }
 
+  // ── Hover preview: a low-presence badge showing the match count ───────────────
+
+  let hoverBadge: HTMLButtonElement | null = null;
+  let hoverBadgeField: HTMLInputElement | null = null;
+  let hoverBadgeTimer: number | undefined;
+
+  function removeHoverBadge(): void {
+    hoverBadge?.remove();
+    hoverBadge = null;
+    hoverBadgeField = null;
+  }
+
+  function positionHoverBadge(): void {
+    if (!hoverBadge || !hoverBadgeField) return;
+    const rect = hoverBadgeField.getBoundingClientRect();
+    hoverBadge.style.left = `${Math.max(8, rect.right - hoverBadge.offsetWidth)}px`;
+    hoverBadge.style.top = `${Math.max(8, rect.top - 30)}px`;
+  }
+
+  async function showHoverBadge(field: HTMLInputElement): Promise<void> {
+    const matches = await requestMatches();
+    if (matches.length === 0 || hoverBadgeField === field) return;
+    removeHoverBadge();
+    const badge = document.createElement('button');
+    badge.type = 'button';
+    badge.textContent = msg('content_matchBadge', [String(matches.length)]);
+    badge.style.cssText = `position:fixed;z-index:2147483647;padding:5px 10px;border:1px solid ${C.border};border-radius:999px;background:${C.surface};color:${C.accentText};font:12px ${C.font};cursor:pointer;box-shadow:${C.shadow};`;
+    hoverBadge = badge;
+    hoverBadgeField = field;
+    badge.addEventListener('mouseenter', () => {
+      if (hoverBadgeTimer !== undefined) window.clearTimeout(hoverBadgeTimer);
+    });
+    badge.addEventListener('click', () => {
+      removeHoverBadge();
+      field.focus();
+    });
+    document.documentElement.append(badge);
+    positionHoverBadge();
+  }
+
+  document.addEventListener('mouseover', (event) => {
+    if (!(event.target instanceof HTMLInputElement)) return;
+    if (!isLoginField(event.target) || document.activeElement === event.target) return;
+    if (hoverBadgeTimer !== undefined) window.clearTimeout(hoverBadgeTimer);
+    const field = event.target;
+    hoverBadgeTimer = window.setTimeout(() => { void showHoverBadge(field); }, 150);
+  }, true);
+
+  document.addEventListener('mouseout', (event) => {
+    if (!(event.target instanceof HTMLInputElement) || event.target !== hoverBadgeField) return;
+    if (hoverBadgeTimer !== undefined) window.clearTimeout(hoverBadgeTimer);
+    hoverBadgeTimer = window.setTimeout(removeHoverBadge, 200);
+  }, true);
+
   document.addEventListener('submit', () => {
     window.setTimeout(() => {
       captureRecoveryFromPage();
@@ -451,8 +690,9 @@ const C = {
   }, true);
   document.addEventListener('focusin', (event) => {
     if (event.target instanceof HTMLInputElement) {
+      removeHoverBadge();
       if (isRegistrationPasswordField(event.target)) {
-        void suggestPassword(event.target);
+        void showGeneratorMenu(event.target);
         return;
       }
       if (isTotpField(event.target)) {

@@ -1,14 +1,5 @@
-:root {
-  --fog-100: #f0f2f6;
-  --fog-300: #c9d2df;
-  --fog-400: #a7b4c6;
-  --fog-500: #6b81a0;
-  --fog-700: #3f4c63;
-  --fog-900: #232b3a;
-  --jade: #6fa896;
-  --danger: #c45656;
-  font-family: 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
-}
+@import '../styles/fog-tokens.css';
+@import '../styles/fonts.css';
 
 * {
   box-sizing: border-box;
@@ -26,8 +17,9 @@ body,
 
 body {
   margin: 0;
-  background: linear-gradient(160deg, #f6f8fb 0%, #f1f4f8 100%);
+  background: linear-gradient(160deg, var(--fog-50) 0%, var(--fog-100) 100%);
   color: var(--fog-900);
+  font-family: 'Figtree', 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
 }
 
 .popup {
@@ -177,7 +169,7 @@ body {
   font-size: 16px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  background: #fff;
+  background: var(--fog-50);
   color: var(--fog-900);
   width: 100%;
 }
@@ -210,7 +202,7 @@ body {
 .search-input:focus {
   outline: none;
   border-color: var(--fog-300);
-  background: #fff;
+  background: var(--fog-50);
 }
 
 .groups {
@@ -231,7 +223,7 @@ body {
   padding: 9px 10px;
   border: 1px solid var(--fog-300);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--surface);
 }
 
 .recovery-pending-title,
@@ -378,6 +370,6 @@ body {
   flex: 1;
   font-size: 13px;
   color: var(--fog-900);
-  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-family: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
   word-break: break-all;
 }

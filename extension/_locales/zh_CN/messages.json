@@ -4,5 +4,44 @@
   },
   "extensionDescription": {
     "message": "浏览器加密密码自动填充"
+  },
+  "content_savePasswordTitle": {
+    "message": "保存密码到有备？"
+  },
+  "content_save": {
+    "message": "保存"
+  },
+  "content_saveNew": {
+    "message": "新建"
+  },
+  "content_dontSave": {
+    "message": "不保存"
+  },
+  "content_saved": {
+    "message": "已保存"
+  },
+  "content_matchBadge": {
+    "message": "有备 · $1"
+  },
+  "content_generate": {
+    "message": "生成"
+  },
+  "content_regenerate": {
+    "message": "重新生成"
+  },
+  "content_copy": {
+    "message": "复制"
+  },
+  "content_use": {
+    "message": "使用"
+  },
+  "content_random": {
+    "message": "随机"
+  },
+  "content_passphrase": {
+    "message": "短语"
+  },
+  "content_pin": {
+    "message": "PIN"
   }
 }
