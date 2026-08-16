@@ -8,6 +8,7 @@ import {
   disableBiometric,
   exportCsv,
   exportVault,
+  getAppPrefs,
   importCsv,
   importVault,
   inTauri,
@@ -17,9 +18,10 @@ import {
   previewCsv,
   saveTextFile,
   revokeDevice,
+  setAppPrefs,
   setupBiometric,
 } from '../lib/ipc';
-import type { AuthorizedDevice, CsvPreview, RestoreSummary } from '../lib/ipc';
+import type { AppPrefs, AuthorizedDevice, CsvPreview, RestoreSummary } from '../lib/ipc';
 import { locale, locales, setLocale, t } from '../lib/i18n';
 import { notifyError, notifyOk } from '../lib/notify';
 import { showDialog, hideDialog } from '../lib/dialog';
@@ -177,6 +179,9 @@ export default function Settings(props: Props) {
                   options={[12, 16, 20, 24, 32].map((length) => ({ v: length, label: String(length) }))}
                   onChange={(value) => updateSettings({ defaultLen: Number(value) })}
                 />
+                <Show when={desktop}>
+                  <StartupSection />
+                </Show>
               </section>
             </Show>
 
@@ -222,6 +227,48 @@ function SettingSelect(props: {
       <SettingLabel name={props.name} desc={props.desc} />
       <CustomSelect value={props.value} options={props.options} onChange={props.onChange} class="setting-select" ariaLabel={props.name} />
     </div>
+  );
+}
+
+function StartupSection() {
+  const [prefs, setPrefs] = createSignal<AppPrefs | null>(null);
+
+  onMount(() => {
+    let active = true;
+    onCleanup(() => { active = false; });
+    getAppPrefs().then((value) => { if (active) setPrefs(value); }).catch(() => {});
+  });
+
+  async function update(patch: Partial<AppPrefs>) {
+    try {
+      setPrefs(await setAppPrefs(patch));
+    } catch (error) {
+      notifyError(errorMessage(error));
+    }
+  }
+
+  const onOff = () => [
+    { v: 'on', label: t('settings.on') },
+    { v: 'off', label: t('settings.off') },
+  ];
+
+  return (
+    <>
+      <SettingSelect
+        name={t('settings.autostart')}
+        desc={t('settings.autostartDesc')}
+        value={() => (prefs()?.autostart ? 'on' : 'off')}
+        options={onOff()}
+        onChange={(value) => void update({ autostart: value === 'on' })}
+      />
+      <SettingSelect
+        name={t('settings.silentStart')}
+        desc={t('settings.silentStartDesc')}
+        value={() => (prefs()?.silentStart ? 'on' : 'off')}
+        options={onOff()}
+        onChange={(value) => void update({ silentStart: value === 'on' })}
+      />
+    </>
   );
 }
 

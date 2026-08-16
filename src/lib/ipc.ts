@@ -20,17 +20,6 @@ export interface ItemSummary {
   updated_at: number;
 }
 
-export interface PassgenOptions {
-  length?: number;
-  words?: number;
-  separator?: string;
-  capitalize?: boolean;
-  useLower?: boolean;
-  useUpper?: boolean;
-  useDigits?: boolean;
-  useSymbols?: boolean;
-}
-
 export interface TotpCode {
   code: string;
   period: number;
@@ -97,6 +86,11 @@ export interface SecuritySettings {
   last_password_confirm_at: number;
 }
 
+export interface AppPrefs {
+  autostart: boolean;
+  silentStart: boolean;
+}
+
 export interface StartedDeviceTransfer {
   qr: string;
   expires_at: number;
@@ -134,8 +128,6 @@ export const listItems = () => call<ItemSummary[]>('list_items');
 export const updateItem = (itemId: string, plaintextJson: string) =>
   call<void>('update_item', { itemId, plaintextJson });
 export const deleteItem = (itemId: string) => call<void>('delete_item', { itemId });
-export const generatePassword = (mode: string, opts: PassgenOptions = {}) =>
-  call<string>('generate_password', { mode, opts });
 export const computeTotp = (secret: string) => call<TotpCode>('compute_totp', { secret }, 'invalid_totp');
 export const readExternalAsset = (path: string) => call<string>('read_external_asset', { path }, 'file_failed');
 export const previewCsv = (content: string) => call<CsvPreview>('preview_csv', { content }, 'file_failed');
@@ -154,6 +146,9 @@ export const isBiometricEnabled = () => call<boolean>('is_biometric_enabled');
 export const setupBiometric = (password: string) => call<void>('setup_biometric', { password }, 'invalid_password');
 export const disableBiometric = () => call<void>('disable_biometric');
 export const unlockWithBiometric = (message: string) => call<void>('unlock_with_biometric', { message }, 'invalid_password');
+export const trySilentUnlock = () => call<boolean>('try_silent_unlock', undefined, 'biometric_unavailable');
+export const getAppPrefs = () => call<AppPrefs>('get_app_prefs');
+export const setAppPrefs = (patch: Partial<AppPrefs>) => call<AppPrefs>('set_app_prefs', { patch });
 export const syncStatus = () => call<SyncStatus>('sync_status', undefined, 'sync_failed');
 export const pairDevice = (serverUrl: string, setupCode: string, deviceName: string) =>
   call<string>('pair_device', { serverUrl, setupCode, deviceName }, 'pair_rejected');

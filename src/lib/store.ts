@@ -133,22 +133,17 @@ export function setActiveNav(nav: string) {
 }
 
 export function selectItem(id: string | null) {
+  if (state.selectedItemId === id) return;
   setState('selectedItemId', id);
-  if (id && inTauri) {
-    ipcGetItem(id)
-      .then((json) => {
-        const data: ItemData = JSON.parse(json);
-        setState('itemContent', id, data);
-      })
-      .catch(() => {});
-  }
+  setState('itemContent', (current) => id && current[id] ? { [id]: current[id] } : {});
+  if (id && inTauri && !state.itemContent[id]) void itemContentFor(id).catch(() => {});
 }
 
 export async function itemContentFor(id: string): Promise<ItemData> {
   let c = state.itemContent[id];
   if (!c && inTauri) {
     c = normalizeItemData(JSON.parse(await ipcGetItem(id)) as ItemData);
-    setState('itemContent', id, c);
+    if (state.selectedItemId === id) setState('itemContent', id, c);
   }
   return c ?? { title: '' };
 }
@@ -227,25 +222,20 @@ export async function saveItem(input: SaveItemInput): Promise<string> {
     if (inTauri) {
       await ipcUpdateItem(input.id, json);
     }
-    setState('items', (i) => i.id === input.id, {
-      ...data,
-      updatedAt: Date.now(),
-    });
-    setState('itemContent', input.id, data);
+    const current = state.items.find((item) => item.id === input.id);
+    if (current) {
+      setState('items', (item) => item.id === input.id, summarizeItem({ ...current, updatedAt: Date.now() }, data));
+    }
+    if (state.selectedItemId === input.id) setState('itemContent', input.id, data);
     syncAfterChange();
     return input.id;
   }
 
   const id = inTauri ? await ipcCreateItem(input.type, json) : crypto.randomUUID();
-  const item: VaultItem = {
-    id,
-    type: input.type,
-    ...data,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  };
+  const now = Date.now();
+  const item = summarizeItem({ id, type: input.type, createdAt: now, updatedAt: now }, data);
   setState('items', (list) => [item, ...list]);
-  setState('itemContent', id, data);
+  setState('itemContent', { [id]: data });
   setState('selectedItemId', id);
   syncAfterChange();
   return id;
@@ -302,6 +292,26 @@ export function initVaultLockListener(): () => void {
   };
 }
 
+// The Rust side can unlock the vault by itself (silent Windows Hello unlock on
+// boot/wake); mirror that into the UI so the lock screen swaps to the vault.
+export function initVaultUnlockListener(): () => void {
+  if (!inTauri) return () => {};
+  let disposed = false;
+  let unlisten: (() => void) | undefined;
+  listen('vault-unlocked', () => {
+    if (state.phase === 'locked') void unlock();
+  })
+    .then((remove) => {
+      if (disposed) remove();
+      else unlisten = remove;
+    })
+    .catch(() => {});
+  return () => {
+    disposed = true;
+    unlisten?.();
+  };
+}
+
 async function finishUnlock() {
   setState('phase', 'unlocked');
   if (inTauri) {
@@ -331,28 +341,45 @@ async function loadItemsFromBackend() {
       id: s.id,
       type: s.item_type as VaultItem['type'],
       title: '',
+      hasTotp: false,
       createdAt: s.created_at,
       updatedAt: s.updated_at,
     }));
+    const firstItemId = items[0]?.id;
+    let firstItemContent: ItemData | undefined;
     const CHUNK = 12;
     for (let i = 0; i < items.length; i += CHUNK) {
-      const batch = items.slice(i, i + CHUNK);
-      await Promise.all(batch.map(async (item) => {
+      const batch = items.slice(i, i + CHUNK).map((item, offset) => ({ item, index: i + offset }));
+      await Promise.all(batch.map(async ({ item, index }) => {
         try {
           const json = await ipcGetItem(item.id);
           const data = normalizeItemData(JSON.parse(json) as ItemData);
-          Object.assign(item, data);
-          setState('itemContent', item.id, data);
+          items[index] = summarizeItem(item, data);
+          if (item.id === firstItemId) firstItemContent = data;
         } catch {
         }
       }));
     }
     setState('items', items);
-    if (items.length > 0) {
-      setState('selectedItemId', items[0].id);
-    }
+    const selectedId = items[0]?.id ?? null;
+    setState('itemContent', firstItemContent && selectedId ? { [selectedId]: firstItemContent } : {});
+    setState('selectedItemId', selectedId);
+    if (selectedId && !firstItemContent) void itemContentFor(selectedId).catch(() => {});
   } catch {
   }
+}
+
+function summarizeItem(
+  item: Pick<VaultItem, 'id' | 'type' | 'createdAt' | 'updatedAt'>,
+  data: ItemData,
+): VaultItem {
+  return {
+    ...item,
+    title: data.title,
+    username: data.username,
+    url: data.url,
+    hasTotp: Boolean(data.totp),
+  };
 }
 
 export function visibleItems(): VaultItem[] {

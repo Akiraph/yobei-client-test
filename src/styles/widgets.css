@@ -629,11 +629,6 @@
   height: calc(100% - 40px);
 }
 
-.custom-select.gen-select {
-  width: 100%;
-  min-width: 0;
-}
-
 .dialog-panel {
   position: relative;
   z-index: 1;

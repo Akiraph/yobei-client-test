@@ -1,7 +1,8 @@
-import { Show } from 'solid-js';
+import { lazy, Show, Suspense } from 'solid-js';
 import ItemDetail from './ItemDetail';
-import ItemEditor from './ItemEditor';
 import type { VaultFeature } from '../model';
+
+const ItemEditor = lazy(() => import('./ItemEditor'));
 
 interface Props {
   feature: VaultFeature;
@@ -19,11 +20,13 @@ export default function VaultDetailPane(props: Props) {
           onDelete={props.feature.remove}
         />
       }>
-        <ItemEditor
-          feature={props.feature}
-          item={props.feature.editingItem()}
-          onClose={props.feature.closeEditor}
-        />
+        <Suspense fallback={<div class="detail-pane" />}>
+          <ItemEditor
+            feature={props.feature}
+            item={props.feature.editingItem()}
+            onClose={props.feature.closeEditor}
+          />
+        </Suspense>
       </Show>
     </aside>
   );

@@ -1,6 +1,7 @@
 use crate::AppState;
 use crate::commands::setup::{refresh_confirm_clock, validate_pin};
 use crate::platform::biometric as plat;
+use tauri::{Emitter, Manager};
 use yobei_core::error::{ErrorCode, Result};
 use yobei_core::security::keychain;
 use yobei_core::vault::storage;
@@ -69,4 +70,95 @@ pub async fn unlock_with_biometric(
     state.touch();
     state.bridge.broadcast_unlocked();
     Ok(())
+}
+
+/// Unlock with the platform-protected biometric credential *without* an
+/// interactive prompt (desktop only). The OS login already proved the user's
+/// identity, so re-prompting Windows Hello on every boot/wake is unnecessary.
+/// Returns true when the vault is now unlocked.
+///
+/// This is called once by the frontend during startup; the session-wake path
+/// goes through [`spawn_session_unlock_watcher`] instead, which emits the
+/// `vault-unlocked` event the UI listens for.
+#[tauri::command]
+pub async fn try_silent_unlock(state: tauri::State<'_, AppState>) -> Result<bool> {
+    #[cfg(desktop)]
+    {
+        Ok(silent_unlock(&state).await)
+    }
+    #[cfg(not(desktop))]
+    {
+        let _ = state;
+        Ok(false)
+    }
+}
+
+/// Decrypt the biometric secret with DPAPI (no Hello prompt) and, if that
+/// succeeds, install the active keys. Every failure path simply returns false.
+#[cfg(desktop)]
+async fn silent_unlock(state: &AppState) -> bool {
+    if state.active_keys.lock().unwrap().is_some() {
+        return true;
+    }
+    let Ok(conn) = storage::open(&state.db_path) else {
+        return false;
+    };
+    let Ok(Some(blob)) = storage::load_biometric_secret(&conn) else {
+        return false;
+    };
+    // Respect the periodic master-password confirmation: once it lapses, silent
+    // unlock stops so the user is forced to re-enter the master password.
+    let Ok(settings) = storage::load_security_settings(&conn, &state.device_key) else {
+        return false;
+    };
+    if keychain::bio_confirm_expired(
+        settings.last_password_confirm_at,
+        settings.confirm_days,
+        chrono::Utc::now().timestamp_millis(),
+    ) {
+        return false;
+    }
+    let Ok(json) = plat::unprotect_secret(&blob) else {
+        return false;
+    };
+    let Ok(cred) = serde_json::from_slice::<keychain::BiometricCredential>(&json) else {
+        return false;
+    };
+    let Ok(keys) = keychain::unlock_with_bio(&cred) else {
+        return false;
+    };
+    let _state_gate = state.bridge.acquire_state_gate().await;
+    if state.active_keys.lock().unwrap().is_some() {
+        return true;
+    }
+    *state.db_conn.lock().unwrap() = Some(conn);
+    *state.active_keys.lock().unwrap() = Some(keys);
+    state.touch();
+    state.bridge.broadcast_unlocked();
+    true
+}
+
+/// Auto-unlock the vault when the Windows session transitions from locked back
+/// to unlocked (wake from sleep or Win+L unlock). The desktop has just been
+/// re-verified by the OS, so a silent DPAPI unlock is safe here.
+#[cfg(desktop)]
+pub(crate) fn spawn_session_unlock_watcher(app: &tauri::AppHandle) {
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let mut was_locked = crate::platform::session::session_locked();
+        let mut ticker = tokio::time::interval(std::time::Duration::from_secs(2));
+        loop {
+            ticker.tick().await;
+            let locked = crate::platform::session::session_locked();
+            let became_unlocked = was_locked && !locked;
+            was_locked = locked;
+            if !became_unlocked {
+                continue;
+            }
+            let state = app.state::<AppState>();
+            if silent_unlock(state.inner()).await {
+                let _ = app.emit("vault-unlocked", ());
+            }
+        }
+    });
 }

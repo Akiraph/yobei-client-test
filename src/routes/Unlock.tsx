@@ -6,6 +6,7 @@ import { PinInput } from '../components/PinInput';
 import { notifyError } from '../lib/notify';
 import { t } from '../lib/i18n';
 import { errorMessage } from '../lib/errors';
+import { isDesktop } from '../lib/window';
 
 export default function Unlock() {
   const [password, setPassword] = createSignal('');
@@ -26,12 +27,21 @@ export default function Unlock() {
       const enabled = await isBiometricEnabled().catch(() => false);
       if (!alive) return;
       setBiometricEnabled(enabled);
-      if (enabled && !autoBiometricAttempted) {
-        autoBiometricAttempted = true;
+      if (!enabled || autoBiometricAttempted) {
+        if (!enabled) setPinAutofocus(true);
+        return;
+      }
+      autoBiometricAttempted = true;
+      if (!isDesktop()) {
+        // Mobile: trigger the system biometric prompt and, on failure, focus the
+        // PIN so the on-screen keyboard appears.
         window.setTimeout(() => {
           if (alive) void doBiometricUnlock();
         }, 0);
       } else {
+        // Desktop: the silent startup unlock was already attempted before this
+        // screen mounted. Focus the PIN for immediate typing; the fingerprint
+        // icon triggers a manual Windows Hello prompt.
         setPinAutofocus(true);
       }
     }

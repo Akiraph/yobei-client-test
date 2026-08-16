@@ -1,4 +1,4 @@
-import { For, Show, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
+import { For, Show, Suspense, createMemo, createSignal, lazy, onCleanup, onMount } from 'solid-js';
 import { computeTotp } from '../../../lib/ipc';
 import { copyText } from '../../../lib/clipboard';
 import { relativeTime } from '../../../lib/format';
@@ -7,10 +7,11 @@ import { errorMessage } from '../../../lib/errors';
 import { IconSearch, IconPlus, IconScan, IconMenu, IconRefresh } from '../../../components/Icon';
 import type { VaultItem } from '../../../lib/types';
 import { t } from '../../../lib/i18n';
-import { QrScanner } from '../../../components/QrScanner';
 import { hideDialog, showDialog } from '../../../lib/dialog';
 import SiteIcon from '../../../components/SiteIcon';
 import type { VaultFeature } from '../model';
+
+const QrScanner = lazy(() => import('../../../components/QrScanner').then(({ QrScanner: component }) => ({ default: component })));
 
 interface Props {
   feature: VaultFeature;
@@ -102,11 +103,13 @@ export default function ItemList(props: Props) {
     setShowNewMenu(false);
     showDialog(
       t('list.scan'),
-      <QrScanner
-        label={t('list.scan')}
-        onResult={(uri) => { hideDialog(); void addTotp(uri); }}
-        onError={notifyError}
-      />,
+      <Suspense fallback={<div class="setting-note">{t('common.loading')}</div>}>
+        <QrScanner
+          label={t('list.scan')}
+          onResult={(uri) => { hideDialog(); void addTotp(uri); }}
+          onError={notifyError}
+        />
+      </Suspense>,
     );
   }
 
@@ -219,6 +222,7 @@ export default function ItemList(props: Props) {
           }>
             {(item) => (
               <VaultRow
+                feature={props.feature}
                 item={item}
                 selected={props.feature.selectedItemId() === item.id}
                 onClick={() => choose(item.id)}
@@ -300,7 +304,7 @@ function showCredentialChoice(feature: VaultFeature, parsed: ParsedTotp, candida
   );
 }
 
-function VaultRow(p: { item: VaultItem; selected: boolean; onClick: () => void }) {
+function VaultRow(p: { feature: VaultFeature; item: VaultItem; selected: boolean; onClick: () => void }) {
   const [copied, setCopied] = createSignal(false);
   let resetTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -310,9 +314,10 @@ function VaultRow(p: { item: VaultItem; selected: boolean; onClick: () => void }
 
   async function copyTotp(e: Event) {
     e.stopPropagation();
-    if (!p.item.totp) return;
     try {
-      const r = await computeTotp(p.item.totp);
+      const { totp } = await p.feature.itemContentFor(p.item.id);
+      if (!totp) return;
+      const r = await computeTotp(totp);
       await copyText(r.code);
     } catch {
       return;
@@ -343,7 +348,7 @@ function VaultRow(p: { item: VaultItem; selected: boolean; onClick: () => void }
         </div>
       </div>
       <div class="item-meta">
-        <Show when={p.item.totp}>
+        <Show when={p.item.hasTotp}>
           <span
             class={`totp-pill${copied() ? ' copied' : ''}`}
             onClick={copyTotp}

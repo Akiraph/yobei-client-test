@@ -1,7 +1,7 @@
 import { createSignal, lazy, onCleanup, onMount, Show, Suspense } from 'solid-js';
-import { state, applyTheme, setPhase, initVaultLockListener, startSyncPolling } from './lib/store';
+import { state, applyTheme, setPhase, unlock, initVaultLockListener, initVaultUnlockListener, startSyncPolling } from './lib/store';
 import { isDesktop } from './lib/window';
-import { isInitialized, inTauri } from './lib/ipc';
+import { isInitialized, inTauri, trySilentUnlock } from './lib/ipc';
 import { t } from './lib/i18n';
 import { NotificationStack } from './lib/notify';
 import { syncTrayLocale } from './lib/tray';
@@ -22,7 +22,18 @@ export default function App() {
       return;
     }
     try {
-      setPhase(await isInitialized() ? 'locked' : 'setup');
+      if (!(await isInitialized())) {
+        setPhase('setup');
+        return;
+      }
+      // Desktop: after login the OS already verified the user, so unlock
+      // silently when a Windows Hello credential is available. Manual lock and
+      // session-wake are handled elsewhere and must not reuse this path.
+      if (isDesktop() && (await trySilentUnlock().catch(() => false))) {
+        await unlock();
+        return;
+      }
+      setPhase('locked');
     } catch {
       setStartupFailed(true);
     }
@@ -31,9 +42,11 @@ export default function App() {
   onMount(() => {
     applyTheme(state.theme);
     const stopLockListener = initVaultLockListener();
+    const stopUnlockListener = initVaultUnlockListener();
     const stopSyncPolling = startSyncPolling();
     onCleanup(() => {
       stopLockListener();
+      stopUnlockListener();
       stopSyncPolling();
     });
     void syncTrayLocale();

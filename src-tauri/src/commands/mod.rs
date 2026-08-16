@@ -4,6 +4,7 @@ pub mod extension;
 pub mod misc;
 pub mod security;
 pub mod setup;
+pub mod startup;
 pub mod sync;
 pub mod transfer;
 #[cfg(desktop)]

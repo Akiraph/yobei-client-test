@@ -231,9 +231,18 @@ pub fn run() {
                 browser_cache,
             });
             commands::security::spawn_auto_lock(app.handle());
+            #[cfg(desktop)]
+            commands::biometric::spawn_session_unlock_watcher(app.handle());
             tauri::async_runtime::spawn(async move {
                 bridge.serve().await;
             });
+            #[cfg(desktop)]
+            {
+                let handle = app.handle().clone();
+                if !commands::startup::launched_hidden() {
+                    show_main_window(&handle);
+                }
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -269,6 +278,9 @@ pub fn run() {
             commands::biometric::setup_biometric,
             commands::biometric::disable_biometric,
             commands::biometric::unlock_with_biometric,
+            commands::biometric::try_silent_unlock,
+            commands::startup::get_app_prefs,
+            commands::startup::set_app_prefs,
             commands::sync::sync_status,
             commands::sync::pair_device,
             commands::sync::sync_now,

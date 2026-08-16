@@ -271,8 +271,10 @@ mod tests {
         .unwrap();
 
         let backup = export_vault_json(&conn, &device_key).unwrap();
-        assert!(!backup.contains("Bank"));
-        assert!(!backup.contains("secret"));
+        // Assert the *values* never leak. A bare `contains("secret")` would
+        // match the `"secret_key"` field name, so quote the values as JSON.
+        assert!(!backup.contains("\"Bank\""));
+        assert!(!backup.contains("\"secret\""));
     }
 
     #[test]

@@ -5,12 +5,8 @@ export interface VaultItem {
   type: ItemType;
   title: string;
   username?: string;
-  password?: string;
   url?: string;
-  totp?: string;
-  recoveryCodes?: string;
-  passkeys?: string[];
-  notes?: string;
+  hasTotp: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -29,6 +25,8 @@ export interface ItemData {
   passkeys?: string[];
   notes?: string;
 }
+
+export type EditableVaultItem = VaultItem & ItemData;
 
 export interface SyncState {
   configured: boolean;

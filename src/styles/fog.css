@@ -34,8 +34,6 @@
   --surface-active: rgba(240, 245, 251, 0.9);
   --overlay-bg:     rgba(37, 40, 64, 0.22);
   --overlay-blur:   2px;
-  --generator-overlay-bg:   rgba(37, 40, 64, 0.18);
-  --generator-overlay-blur: 4px;
   --drawer-bg:      rgba(255, 255, 255, 0.9);
   --drawer-blur:    24px;
 

@@ -2,13 +2,13 @@ import { createSignal, For, Show } from 'solid-js';
 import { IconBack, IconEye, IconEyeOff, IconTrash } from '../../../components/Icon';
 import { notifyError } from '../../../lib/notify';
 import { errorMessage } from '../../../lib/errors';
-import type { ItemType, VaultItem } from '../../../lib/types';
+import type { EditableVaultItem, ItemType } from '../../../lib/types';
 import { t } from '../../../lib/i18n';
 import type { VaultFeature } from '../model';
 
 interface Props {
   feature: VaultFeature;
-  item?: VaultItem | null;
+  item?: EditableVaultItem | null;
   onClose: () => void;
 }
 

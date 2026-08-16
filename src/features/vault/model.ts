@@ -97,9 +97,11 @@ export function createVaultFeature() {
     if (isMobile()) showDetail();
   }
 
-  function edit(id: string) {
-    setEditing({ mode: 'edit', id });
+  async function edit(id: string) {
     if (isMobile()) showDetail();
+    if (state.selectedItemId !== id) selectItem(id);
+    await itemContentFor(id).catch(() => {});
+    setEditing({ mode: 'edit', id });
   }
 
   async function remove(id: string) {
@@ -177,7 +179,9 @@ export function createVaultFeature() {
     editing,
     editingItem: () => {
       const current = editing();
-      return current?.mode === 'edit' ? state.items.find((item) => item.id === current.id) : null;
+      if (current?.mode !== 'edit') return null;
+      const item = state.items.find((value) => value.id === current.id);
+      return item ? { ...item, ...state.itemContent[item.id] } : null;
     },
     sidebarOpen,
     settingsOpen: () => state.showSettings,
