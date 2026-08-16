@@ -106,13 +106,13 @@ function concatBytes(left: Uint8Array, right: Uint8Array): Uint8Array {
 }
 
 async function readSession(): Promise<PersistedSession> {
-  const result = await chrome.storage.session.get(SESSION_KEY);
+  const result = await chrome.storage.local.get(SESSION_KEY);
   return { ...EMPTY, ...(result[SESSION_KEY] as Partial<PersistedSession> | undefined) };
 }
 
 async function writeSession(patch: Partial<PersistedSession>): Promise<void> {
   const current = await readSession();
-  await chrome.storage.session.set({ [SESSION_KEY]: { ...current, ...patch } });
+  await chrome.storage.local.set({ [SESSION_KEY]: { ...current, ...patch } });
 }
 
 async function getPendingCaptureKey(): Promise<CryptoKey> {
@@ -522,6 +522,36 @@ export async function getItemSecrets(id: string, fields: SecretField[]): Promise
   return requestEncrypted<SecretItem>('secret', { type: 'secret', request_id: requestId, id, fields });
 }
 
+function normalizeHost(url: string): string {
+  try {
+    const parsed = new URL(url.includes('://') ? url : `https://${url}`);
+    return parsed.hostname.replace(/^www\./, '').toLowerCase();
+  } catch {
+    return (url ?? '')
+      .toLowerCase()
+      .replace(/^https?:\/\//, '')
+      .replace(/^www\./, '')
+      .split('/')[0];
+  }
+}
+
+function hostsMatch(left: string, right: string): boolean {
+  if (!left || !right) return false;
+  return left === right || left.endsWith(`.${right}`) || right.endsWith(`.${left}`);
+}
+
+/// Login items whose host matches the page being browsed (or all login items
+/// when the host is empty). Returns nothing while the vault is locked.
+export function matchesForHost(host: string): DecryptedItem[] {
+  if (!sessionKey) return [];
+  const target = normalizeHost(host);
+  return items.filter((item) => {
+    if (item.itemType !== 'login') return false;
+    if (!target) return true;
+    return hostsMatch(normalizeHost(item.url ?? ''), target);
+  });
+}
+
 export interface CaptureResult {
   matched: boolean;
   id?: string;
@@ -830,7 +860,7 @@ export async function clearPairing(): Promise<void> {
   rejectPending('pair_rejected');
   await chrome.storage.local.remove([DEVICE_ID_KEY, DEVICE_KEY_STORAGE]);
   await chrome.storage.local.remove([PENDING_CAPTURE_KEY, PENDING_RECOVERY_KEY, PENDING_PASSWORD_KEY]);
-  await chrome.storage.session.remove(SESSION_KEY);
+  await chrome.storage.local.remove(SESSION_KEY);
 }
 
 export async function getSnapshot(): Promise<SessionSnapshot> {

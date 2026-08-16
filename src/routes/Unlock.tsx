@@ -87,11 +87,8 @@ export default function Unlock() {
       setStatus('ok');
       setRevealed(true);
       transitionTimer = setTimeout(() => void unlock(), 700);
-    } catch (error) {
-      setStatus('error');
-      const message = errorMessage(error, 'biometric_unavailable');
-      setErrMsg(message);
-      notifyError(message);
+    } catch {
+      // Cancelled or unavailable — fall back to the PIN silently.
       setPinAutofocus(true);
     }
     setBiometricBusy(false);

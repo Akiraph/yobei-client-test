@@ -15,6 +15,7 @@ import {
   createPendingRecoveryCapture,
   createPendingPasswordCapture,
   getSnapshot,
+  matchesForHost,
   type SecretField,
 } from './session';
 import { failure } from '../lib/errors';
@@ -83,6 +84,19 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         .then((item) => sendResponse({ ok: true, item }))
         .catch((error) => sendResponse(failure(error, 'operation_failed')));
       return true;
+    }
+    case 'get_matches': {
+      const host = typeof message.url === 'string' ? message.url : '';
+      sendResponse({
+        ok: true,
+        items: matchesForHost(host).map((item) => ({
+          id: item.id,
+          title: item.title,
+          username: item.username ?? '',
+          hasTotp: item.hasTotp,
+        })),
+      });
+      break;
     }
     case 'fill': {
       const request = message as FillRequest;

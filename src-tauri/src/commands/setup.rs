@@ -41,6 +41,7 @@ pub async fn unlock_vault(password: String, state: tauri::State<'_, AppState>) -
             storage::load_key_store(&conn, &device_key)?.ok_or(ErrorCode::NotInitialized)?;
         let keys = keychain::unlock(password.as_bytes(), &store_data)?;
         refresh_confirm_clock(&conn, &device_key)?;
+        auto_enable_biometric(&conn, &keys.master_key);
         Ok((conn, keys))
     })
     .await
@@ -61,6 +62,31 @@ pub(crate) fn refresh_confirm_clock(conn: &rusqlite::Connection, device_key: &[u
     let mut settings = storage::load_security_settings(conn, device_key)?;
     settings.last_password_confirm_at = chrono::Utc::now().timestamp_millis();
     storage::save_security_settings(conn, device_key, &settings)
+}
+
+/// Auto-enable biometric unlock on the first PIN unlock when the platform
+/// supports it, so the unlock screen "just works" without a Settings opt-in.
+/// Best-effort: any failure is ignored and never blocks unlocking.
+fn auto_enable_biometric(conn: &rusqlite::Connection, master_key: &[u8; 32]) {
+    if !crate::platform::biometric::is_available() {
+        return;
+    }
+    if storage::load_biometric_secret(conn)
+        .map(|secret| secret.is_some())
+        .unwrap_or(false)
+    {
+        return;
+    }
+    let Ok(cred) = keychain::create_biometric_credential(master_key) else {
+        return;
+    };
+    let Ok(json) = serde_json::to_vec(&cred) else {
+        return;
+    };
+    let Ok(blob) = crate::platform::biometric::protect_secret(&json) else {
+        return;
+    };
+    let _ = storage::save_biometric_secret(conn, &blob);
 }
 
 #[tauri::command]

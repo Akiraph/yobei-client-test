@@ -15,6 +15,8 @@
     "popup.locked": "The desktop vault is locked.",
     "popup.unlockHint": "Unlock Yobei to restore the entries here.",
     "popup.clearPairing": "Remove pairing",
+    "popup.active": "Yobei is ready",
+    "popup.activeHint": "Focus a login field to autofill, or a 2FA field to see the code.",
     "popup.search": "Search entries",
     "popup.currentPage": "Current page",
     "popup.allItems": "All entries",

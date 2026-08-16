@@ -40,13 +40,16 @@ mod android_imp {
             allow_device_credential: false,
             cancel_title: None,
             fallback_title: None,
-            title: Some("Yobei".to_string()),
-            subtitle: Some(message.to_string()),
+            // The system already shows the app name as the prompt header, so
+            // keep the title to the action itself and leave subtitle/description
+            // empty — otherwise the same text appears twice.
+            title: Some(message.to_string()),
+            subtitle: None,
             confirmation_required: Some(false),
         };
         app()?
             .biometric()
-            .authenticate(message.to_string(), options)
+            .authenticate(String::new(), options)
             .map(|_| true)
             .map_err(|error| {
                 eprintln!("[yobei] biometric authentication failed: {error}");

@@ -1,7 +1,7 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { render } from 'solid-js/web';
-import type { DecryptedItem, PendingPasswordCapture, PendingRecoveryCapture, SecretItem, SessionSnapshot } from '../background/session';
-import { errorText, initializeLocale, locale, nextLocaleDisplayName, t, toggleLocale } from '../lib/i18n';
+import type { DecryptedItem, PendingPasswordCapture, PendingRecoveryCapture, SessionSnapshot } from '../background/session';
+import { errorText, initializeLocale, nextLocaleDisplayName, t, toggleLocale } from '../lib/i18n';
 import type { ExtensionErrorCode } from '../lib/errors';
 import './popup.css';
 
@@ -18,18 +18,6 @@ interface ResponseMessage {
 interface Notice {
   kind: 'success' | 'error';
   text: string;
-}
-
-function hostOf(url: string | undefined): string {
-  try {
-    return new URL(url ?? '').hostname;
-  } catch {
-    return '';
-  }
-}
-
-function itemHost(item: DecryptedItem): string {
-  return hostOf(item.url);
 }
 
 function send(message: unknown): Promise<ResponseMessage> {
@@ -50,10 +38,6 @@ function isSnapshot(response: ResponseMessage): response is ResponseMessage & Se
 
 function Popup() {
   const [status, setStatus] = createSignal<SessionSnapshot | null>(null);
-  const [host, setHost] = createSignal('');
-  const [query, setQuery] = createSignal('');
-  const [copied, setCopied] = createSignal<string | null>(null);
-  const [filled, setFilled] = createSignal<string | null>(null);
   const [generatorOpen, setGeneratorOpen] = createSignal(false);
   const [generatorMode, setGeneratorMode] = createSignal<'random' | 'passphrase' | 'pin'>('random');
   const [generatedPassword, setGeneratedPassword] = createSignal('');
@@ -66,8 +50,6 @@ function Popup() {
 
   let pollTimer: number | undefined;
   let feedbackTimer: number | undefined;
-  let copiedTimer: number | undefined;
-  let filledTimer: number | undefined;
   let generatedCopiedTimer: number | undefined;
 
   const showNotice = (kind: Notice['kind'], text: string) => {
@@ -99,6 +81,8 @@ function Popup() {
     }
     if (response.code) showNotice('error', errorText(response.code));
   };
+
+  const loginItems = createMemo(() => (status()?.items ?? []).filter((item) => item.itemType === 'login'));
 
   const savePassword = async (capture: PendingPasswordCapture, itemId: string) => {
     setBusy(true);
@@ -154,12 +138,6 @@ function Popup() {
 
   onMount(async () => {
     await initializeLocale();
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-      setHost(hostOf(tab?.url));
-    } catch {
-      setHost('');
-    }
     await refresh();
     pollTimer = window.setInterval(refresh, POLL_INTERVAL_MS);
   });
@@ -167,89 +145,8 @@ function Popup() {
   onCleanup(() => {
     if (pollTimer) window.clearInterval(pollTimer);
     if (feedbackTimer) window.clearTimeout(feedbackTimer);
-    if (copiedTimer) window.clearTimeout(copiedTimer);
-    if (filledTimer) window.clearTimeout(filledTimer);
     if (generatedCopiedTimer) window.clearTimeout(generatedCopiedTimer);
   });
-
-  const matchesHost = createMemo(() => {
-    const currentHost = host();
-    return currentHost ? (item: DecryptedItem) => itemHost(item) === currentHost : () => true;
-  });
-
-  const filtered = createMemo(() => {
-    const snapshot = status();
-    if (!snapshot) return [];
-    const search = query().trim().toLowerCase();
-    return snapshot.items.filter((item) => item.itemType === 'login').filter((item) => {
-      if (!search) return true;
-      return item.title.toLowerCase().includes(search) || (item.username ?? '').toLowerCase().includes(search);
-    });
-  });
-
-  const currentMatches = createMemo(() => filtered().filter(matchesHost()));
-  const otherItems = createMemo(() => filtered().filter((item) => !matchesHost()(item)));
-  const loginItems = createMemo(() => (status()?.items ?? []).filter((item) => item.itemType === 'login'));
-
-  const flash = (setter: (value: string | null) => void, id: string) => {
-    if (copiedTimer) window.clearTimeout(copiedTimer);
-    setter(id);
-    copiedTimer = window.setTimeout(() => setter(null), FEEDBACK_DURATION_MS);
-  };
-
-  const copyPassword = async (item: DecryptedItem) => {
-    const response = await send({ type: 'get_item_secret', id: item.id, fields: ['password'] });
-    const password = response.ok && response.item && typeof (response.item as SecretItem).password === 'string'
-      ? (response.item as SecretItem).password
-      : undefined;
-    if (!password) {
-      showNotice('error', t('popup.noPassword'));
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(password);
-      flash(setCopied, item.id);
-      showNotice('success', t('notify.copied'));
-    } catch {
-      showNotice('error', t('error.copy'));
-    }
-  };
-
-  const fillItem = async (item: DecryptedItem) => {
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-      if (!tab?.id) {
-        showNotice('error', t('error.noActiveTab'));
-        return;
-      }
-      const response = await send({ type: 'fill', id: item.id, tabId: tab.id });
-      if (response.ok) {
-        if (filledTimer) window.clearTimeout(filledTimer);
-        setFilled(item.id);
-        filledTimer = window.setTimeout(() => setFilled(null), FEEDBACK_DURATION_MS);
-        return;
-      }
-      await copyPassword(item);
-      showNotice('error', t('popup.fillUnavailable'));
-    } catch {
-      showNotice('error', t('error.fill'));
-    }
-  };
-
-  const copyTotp = async (item: DecryptedItem) => {
-    const response = await send({ type: 'get_item_secret', id: item.id, fields: ['totp_code'] });
-    const code = response.ok && response.item && typeof (response.item as SecretItem).totp_code === 'string'
-      ? (response.item as SecretItem).totp_code
-      : undefined;
-    if (!code) return;
-    try {
-      await navigator.clipboard.writeText(code);
-      flash(setCopied, item.id);
-      showNotice('success', t('notify.copied'));
-    } catch {
-      showNotice('error', t('error.copy'));
-    }
-  };
 
   const submitPair = async (event: Event) => {
     event.preventDefault();
@@ -313,123 +210,56 @@ function Popup() {
     }
   };
 
-  const itemRow = (item: DecryptedItem, canFill: boolean) => (
-    <li class="item">
-      <div class="item-main">
-        <span class="item-title">{item.title}</span>
-        <span class="item-user">{item.username || t('popup.noUsername')}</span>
-        <Show when={item.hasTotp}>
-          <span class="item-totp">••••</span>
-        </Show>
-      </div>
-      <div class="item-actions">
-        <Show when={copied() === item.id}>
-          <span class="ok-chip">{t('popup.copied')}</span>
-        </Show>
-        <Show when={filled() === item.id}>
-          <span class="ok-chip">{t('popup.filled')}</span>
-        </Show>
-        <Show when={canFill}>
-          <button class="act" title={t('popup.fillTitle')} onClick={() => void fillItem(item)}>
-            {t('popup.fill')}
+  const pendingCapture = (capture: PendingPasswordCapture | PendingRecoveryCapture) => {
+    const candidates = () => {
+      const ids = new Set(capture.candidates.map((candidate) => candidate.id));
+      return loginItems().filter((item) => ids.has(item.id));
+    };
+    const isPassword = 'password' in capture;
+    return (
+      <li class="recovery-pending">
+        <div class="recovery-pending-title">{capture.url || t('popup.recoveryAccount')}</div>
+        <div class="recovery-pending-meta">{capture.username || t('popup.noUsername')}</div>
+        <div class="recovery-pending-actions">
+          <For each={candidates()}>
+            {(item: DecryptedItem) => (
+              <button class="act" onClick={() => void (isPassword ? savePassword(capture as PendingPasswordCapture, item.id) : saveRecovery(capture as PendingRecoveryCapture, item.id))} disabled={busy()}>
+                {item.title}
+              </button>
+            )}
+          </For>
+          <Show when={candidates().length === 0}>
+            <For each={loginItems()}>
+              {(item: DecryptedItem) => (
+                <button class="act" onClick={() => void (isPassword ? savePassword(capture as PendingPasswordCapture, item.id) : saveRecovery(capture as PendingRecoveryCapture, item.id))} disabled={busy()}>
+                  {item.title}
+                </button>
+              )}
+            </For>
+          </Show>
+          <button class="act" onClick={() => void (isPassword ? createPassword(capture as PendingPasswordCapture) : createRecovery(capture as PendingRecoveryCapture))} disabled={busy()}>
+            {t('popup.createAccount')}
           </button>
-        </Show>
-        <button class="act" title={t('popup.copyPasswordTitle')} onClick={() => void copyPassword(item)}>
-          {t('popup.copy')}
-        </button>
-        <Show when={item.hasTotp}>
-          <button class="act" title={t('popup.copyTotpTitle')} onClick={() => void copyTotp(item)}>
-            {t('popup.totp')}
-          </button>
-        </Show>
-      </div>
-    </li>
-  );
+        </div>
+      </li>
+    );
+  };
 
-  const unlockedBody = () => (
+  const activeBody = () => (
     <div class="popup-body">
-      <div class="search">
-        <input
-          class="search-input"
-          placeholder={t('popup.search')}
-          value={query()}
-          onInput={(event) => setQuery(event.currentTarget.value)}
-        />
+      <div class="empty">
+        <p class="popup-status ok">{t('popup.active')}</p>
+        <p class="popup-status hint">{t('popup.activeHint')}</p>
       </div>
 
       <div class="groups">
         <Show when={pendingPassword().length > 0}>
           <p class="group-label">{t('popup.passwordPending')}</p>
-          <For each={pendingPassword()}>
-            {(capture) => {
-              const candidates = () => {
-                const ids = new Set(capture.candidates.map((candidate) => candidate.id));
-                return loginItems().filter((item) => ids.has(item.id));
-              };
-              return (
-                <li class="recovery-pending">
-                  <div class="recovery-pending-title">{capture.url || t('popup.recoveryAccount')}</div>
-                  <div class="recovery-pending-meta">{capture.username || t('popup.noUsername')}</div>
-                  <div class="recovery-pending-actions">
-                    <For each={candidates()}>
-                      {(item) => <button class="act" onClick={() => void savePassword(capture, item.id)} disabled={busy()}>{item.title}</button>}
-                    </For>
-                    <Show when={candidates().length === 0}>
-                      <For each={loginItems()}>
-                        {(item) => <button class="act" onClick={() => void savePassword(capture, item.id)} disabled={busy()}>{item.title}</button>}
-                      </For>
-                    </Show>
-                    <button class="act" onClick={() => void createPassword(capture)} disabled={busy()}>{t('popup.createAccount')}</button>
-                  </div>
-                </li>
-              );
-            }}
-          </For>
+          <For each={pendingPassword()}>{(capture) => pendingCapture(capture)}</For>
         </Show>
         <Show when={pendingRecovery().length > 0}>
           <p class="group-label">{t('popup.recoveryPending')}</p>
-          <For each={pendingRecovery()}>
-            {(capture) => {
-              const candidates = () => {
-                const ids = new Set(capture.candidates.map((candidate) => candidate.id));
-                return loginItems().filter((item) => ids.has(item.id));
-              };
-              return (
-                <li class="recovery-pending">
-                  <div class="recovery-pending-title">{capture.url || t('popup.recoveryAccount')}</div>
-                  <div class="recovery-pending-meta">{capture.username || t('popup.noUsername')}</div>
-                  <div class="recovery-pending-actions">
-                    <For each={candidates()}>
-                      {(item) => <button class="act" onClick={() => void saveRecovery(capture, item.id)} disabled={busy()}>{item.title}</button>}
-                    </For>
-                    <Show when={candidates().length === 0}>
-                      <For each={loginItems()}>
-                        {(item) => <button class="act" onClick={() => void saveRecovery(capture, item.id)} disabled={busy()}>{item.title}</button>}
-                      </For>
-                    </Show>
-                    <button class="act" onClick={() => void createRecovery(capture)} disabled={busy()}>{t('popup.createAccount')}</button>
-                  </div>
-                </li>
-              );
-            }}
-          </For>
-        </Show>
-        <Show when={currentMatches().length > 0}>
-          <p class="group-label">{t('popup.currentPage')}</p>
-          <ul class="items">
-            <For each={currentMatches()}>{(item) => itemRow(item, true)}</For>
-          </ul>
-        </Show>
-        <Show when={otherItems().length > 0}>
-          <p class="group-label">{t('popup.allItems')}</p>
-          <ul class="items">
-            <For each={otherItems()}>{(item) => itemRow(item, false)}</For>
-          </ul>
-        </Show>
-        <Show when={currentMatches().length === 0 && otherItems().length === 0}>
-          <div class="empty">
-            <p class="popup-status">{t('popup.noItems')}</p>
-          </div>
+          <For each={pendingRecovery()}>{(capture) => pendingCapture(capture)}</For>
         </Show>
       </div>
 
@@ -464,6 +294,8 @@ function Popup() {
           {generatorOpen() ? t('popup.closeGenerator') : t('popup.generator')}
         </button>
       </footer>
+
+      <button class="btn ghost clear-pairing" onClick={() => setConfirmClear(true)}>{t('popup.clearPairing')}</button>
     </div>
   );
 
@@ -496,7 +328,9 @@ function Popup() {
         {(current) => <div class={`notice ${current().kind}`}>{current().text}</div>}
       </Show>
 
-      {!snapshot()?.paired ? (
+      {snapshot() == null || snapshot()?.connecting ? (
+        <p class="popup-status body">{t('popup.connecting')}</p>
+      ) : !snapshot()!.paired ? (
         <form class="popup-body pair" onSubmit={submitPair}>
           <p class="pair-hint">{t('popup.pairHint')}</p>
           <input
@@ -514,9 +348,7 @@ function Popup() {
           </button>
           <p class="pair-path">{t('popup.pairPath')}</p>
         </form>
-      ) : snapshot()?.connecting ? (
-        <p class="popup-status body">{t('popup.connecting')}</p>
-      ) : !snapshot()?.unlocked ? (
+      ) : !snapshot()!.unlocked ? (
         <div class="popup-body">
           <div class="empty">
             <p class="popup-status">{t('popup.locked')}</p>
@@ -526,7 +358,7 @@ function Popup() {
           </div>
         </div>
       ) : (
-        unlockedBody()
+        activeBody()
       )}
 
       <Show when={confirmClear()}>
@@ -547,6 +379,14 @@ function Popup() {
       </Show>
     </main>
   );
+}
+
+function hostOf(url: string | undefined): string {
+  try {
+    return new URL(url ?? '').hostname;
+  } catch {
+    return '';
+  }
 }
 
 render(() => <Popup />, document.getElementById('root')!);
