@@ -33,7 +33,7 @@ export default function Sidebar(props: Props) {
 
       <div class="sidebar-footer">
         <SyncButton feature={props.feature} onOpenSettings={openSettings} />
-        <button class="nav-item" classList={{ active: props.feature.settingsOpen() }} onClick={openSettings}>
+        <button class="nav-item" aria-current={props.feature.settingsOpen() ? 'page' : undefined} onClick={openSettings}>
           <span class="nav-icon"><IconSettings size={15} /></span>
           <span class="nav-label">{t('nav.settings')}</span>
         </button>
@@ -97,7 +97,7 @@ interface NavItemProps {
 
 function NavItem(props: NavItemProps) {
   return (
-    <button class={`nav-item${props.active ? ' active' : ''}`} onClick={() => props.onClick(props.id)}>
+    <button class="nav-item" aria-current={props.active ? 'page' : undefined} onClick={() => props.onClick(props.id)}>
       <span class="nav-icon">{props.icon}</span>
       <span class="nav-label">{props.label}</span>
       <Show when={props.count !== undefined}>

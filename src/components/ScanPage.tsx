@@ -1,9 +1,10 @@
-import { createSignal, onCleanup, Show } from 'solid-js';
+import { createSignal, onCleanup, onMount, Show } from 'solid-js';
 import type { IScannerControls } from '@zxing/browser';
 import { scanQrCode } from '../lib/qr';
 import { t } from '../lib/i18n';
 import { errorMessage } from '../lib/errors';
 import { notifyError } from '../lib/notify';
+import { isDesktop } from '../lib/window';
 import { IconBack, IconScan } from './Icon';
 
 interface Props {
@@ -80,9 +81,13 @@ export default function ScanPage(props: Props) {
     stopCamera();
   });
 
+  onMount(() => {
+    if (!isDesktop()) void start();
+  });
+
   return (
     <div class="scan-page" classList={{ ready: cameraStarted() }}>
-      <video ref={video} class="scan-camera" muted playsinline aria-label={props.label} />
+      <video ref={video} class="scan-camera" muted autoplay playsinline aria-label={props.label} />
       <div class="scan-frame" aria-hidden="true">
         <span class="scan-corner tl" />
         <span class="scan-corner tr" />
@@ -102,10 +107,10 @@ export default function ScanPage(props: Props) {
         <Show when={error()}>
           <div class="scan-error" role="alert">{error()}</div>
         </Show>
-        <Show when={!cameraStarted() || error()}>
+        <Show when={isDesktop() || error()}>
           <button type="button" class="btn btn-primary scan-start" onClick={() => void start()} disabled={starting()}>
             <IconScan size={16} />
-            {starting() ? t('common.loading') : t('qr.scanCode')}
+            {starting() ? t('common.loading') : error() ? t('common.retry') : t('qr.scanCode')}
           </button>
         </Show>
       </div>
