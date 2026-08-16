@@ -86,6 +86,13 @@ export function siteIconUrlSync(url?: string, title?: string): string | undefine
   return fallbackIcon(host);
 }
 
+/// Whether the host has already been resolved and cached — lets the UI render
+/// the icon immediately instead of flashing the letter fallback first.
+export function siteIconCached(url?: string, title?: string): boolean {
+  const host = hostFrom(url) || hostFrom(title);
+  return !!host && resolvedCache.has(host);
+}
+
 export async function siteIconUrl(url?: string, title?: string): Promise<string | undefined> {
   const host = hostFrom(url) || hostFrom(title);
   if (!host) return undefined;

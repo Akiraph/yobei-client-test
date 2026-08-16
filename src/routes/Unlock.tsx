@@ -10,15 +10,13 @@ import { isDesktop } from '../lib/window';
 
 export default function Unlock() {
   const [password, setPassword] = createSignal('');
-  const [status, setStatus] = createSignal<'idle' | 'ok' | 'error'>('idle');
-  const [revealed, setRevealed] = createSignal(false);
+  const [status, setStatus] = createSignal<'idle' | 'error'>('idle');
   const [errMsg, setErrMsg] = createSignal('');
   const [biometricEnabled, setBiometricEnabled] = createSignal(false);
   const [pinAutofocus, setPinAutofocus] = createSignal(false);
   const [biometricBusy, setBiometricBusy] = createSignal(false);
   const [unlockBusy, setUnlockBusy] = createSignal(false);
   let autoBiometricAttempted = false;
-  let transitionTimer: ReturnType<typeof setTimeout> | undefined;
 
   onMount(() => {
     let alive = true;
@@ -48,10 +46,6 @@ export default function Unlock() {
     void probeBiometric();
   });
 
-  onCleanup(() => {
-    if (transitionTimer) clearTimeout(transitionTimer);
-  });
-
   async function doUnlock() {
     if (unlockBusy() || biometricBusy()) return;
     if (!/^\d{6}$/.test(password())) {
@@ -64,9 +58,7 @@ export default function Unlock() {
     try {
       await unlockVault(password());
       recordPasswordEntry();
-      setStatus('ok');
-      setRevealed(true);
-      transitionTimer = setTimeout(() => void unlock(), 700);
+      void unlock();
     } catch (error) {
       setStatus('error');
       const message = errorMessage(error, 'invalid_password');
@@ -84,9 +76,7 @@ export default function Unlock() {
     setBiometricBusy(true);
     try {
       await unlockWithBiometric(t('unlock.biometricUnlock'));
-      setStatus('ok');
-      setRevealed(true);
-      transitionTimer = setTimeout(() => void unlock(), 700);
+      void unlock();
     } catch {
       // Cancelled or unavailable — fall back to the PIN silently.
       setPinAutofocus(true);
@@ -101,7 +91,7 @@ export default function Unlock() {
 
   return (
     <div class="unlock-stage">
-      <div class={`unlock-visual${revealed() ? ' revealed' : ''}`}>
+      <div class="unlock-visual">
         <span class="unlock-content">{t('app.name')}</span>
       </div>
 
@@ -124,10 +114,9 @@ export default function Unlock() {
           </div>
         </Show>
 
-        <div class={`unlock-status${status() === 'ok' ? ' ok' : status() === 'error' ? ' error' : ''}`}>
-          <Show when={status() === 'ok'}>{t('unlock.success')}</Show>
+        <div class={`unlock-status${status() === 'error' ? ' error' : ''}`}>
           <Show when={status() === 'error'}>{errMsg()}</Show>
-          <Show when={status() === 'idle'}>{unlockBusy() || biometricBusy() ? t('common.processing') : hint()}</Show>
+          <Show when={status() !== 'error'}>{unlockBusy() || biometricBusy() ? t('common.processing') : hint()}</Show>
         </div>
       </div>
     </div>

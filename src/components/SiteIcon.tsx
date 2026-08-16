@@ -1,6 +1,6 @@
 import { createEffect, createSignal, onCleanup, Show } from 'solid-js';
 import { initial } from '../lib/format';
-import { siteIconUrl, siteIconUrlSync } from '../lib/siteIcons';
+import { siteIconUrl, siteIconUrlSync, siteIconCached } from '../lib/siteIcons';
 
 interface Props {
   title: string;
@@ -11,20 +11,19 @@ interface Props {
 export default function SiteIcon(props: Props) {
   const [source, setSource] = createSignal<string | undefined>(siteIconUrlSync(props.url, props.title));
   const [broken, setBroken] = createSignal(false);
-  const [loaded, setLoaded] = createSignal(false);
+  const [loaded, setLoaded] = createSignal(siteIconCached(props.url, props.title));
 
   createEffect(() => {
     const url = props.url;
     const title = props.title;
     let active = true;
     setBroken(false);
-    setLoaded(false);
+    setLoaded(siteIconCached(url, title));
     setSource(siteIconUrlSync(url, title));
     siteIconUrl(url, title)
       .then((value) => {
         if (!active) return;
         setSource(value);
-        setLoaded(false);
       })
       .catch(() => {});
     onCleanup(() => { active = false; });
