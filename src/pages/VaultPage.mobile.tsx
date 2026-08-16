@@ -2,8 +2,10 @@ import { lazy, Show, Suspense } from 'solid-js';
 import Sidebar from '../features/vault/ui/Sidebar';
 import ItemList from '../features/vault/ui/ItemList';
 import VaultDetailPane from '../features/vault/ui/VaultDetailPane';
-import ScanPage from '../features/vault/ui/ScanPage';
+import { addTotpFromUri } from '../features/vault/totp';
+import ScanPage from '../components/ScanPage';
 import Backdrop from '../shared/ui/Backdrop';
+import { t } from '../lib/i18n';
 import type { VaultFeature } from '../features/vault/model';
 
 const Settings = lazy(() => import('../routes/Settings'));
@@ -59,7 +61,11 @@ export default function VaultPageMobile(props: Props) {
       onTouchCancel={onTouchEnd}
     >
       <Show when={props.feature.scanning()}>
-        <ScanPage feature={props.feature} />
+        <ScanPage
+          label={t('list.scan')}
+          onClose={props.feature.closeScan}
+          onResult={addTotpFromUri}
+        />
       </Show>
 
       <Show when={!props.feature.scanning() && props.feature.settingsOpen()}>

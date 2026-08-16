@@ -28,7 +28,7 @@ import { showDialog, hideDialog } from '../lib/dialog';
 import { IconBack } from '../components/Icon';
 import { SettingLabel } from '../components/SettingLabel';
 import { CustomSelect } from '../components/CustomSelect';
-import { QrScanner } from '../components/QrScanner';
+import ScanPage from '../components/ScanPage';
 import { errorMessage } from '../lib/errors';
 import { isDesktop } from '../lib/window';
 import { getVersion } from '@tauri-apps/api/app';
@@ -82,6 +82,15 @@ export default function Settings(props: Props) {
               )}
             </For>
           </nav>
+          <div class="settings-mobile-picker">
+            <CustomSelect
+              value={section}
+              options={sections().map((item) => ({ v: item.id, label: item.label }))}
+              onChange={(value) => setSection(String(value))}
+              ariaLabel={t('settings.title')}
+              class="settings-section-select"
+            />
+          </div>
         </aside>
 
         <main class="settings-content">
@@ -514,7 +523,11 @@ function SyncSection() {
           </button>
         </div>
         <Show when={scanning()}>
-          <QrScanner label={t('settings.scanDevice')} onResult={approveTransfer} onError={notifyError} />
+          <ScanPage
+            label={t('settings.scanDevice')}
+            onClose={() => setScanning(false)}
+            onResult={approveTransfer}
+          />
         </Show>
       </div>
       <div class="setting-row setting-row-stack">
