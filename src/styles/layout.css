@@ -93,15 +93,6 @@
   overflow-y: auto;
 }
 
-/* Desktop sidebar sits directly over the fog/sky layers, which are brighter at
-   the top-left (white fog blob) than at the bottom. A consistent surface keeps
-   the nav items' hover/focus background from reading as lighter near the top. */
-.vault-sidebar:not(.drawer) {
-  background: var(--surface);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-}
-
 .sidebar-nav {
   display: flex;
   flex-direction: column;
