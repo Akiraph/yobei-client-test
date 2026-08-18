@@ -739,6 +739,8 @@
   min-height: 0;
   overflow-y: auto;
   width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 .settings-head {
@@ -792,8 +794,8 @@
 
 .settings-body {
   width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
+  max-width: 680px;
+  margin: 0;
   padding: 36px 24px calc(48px + env(safe-area-inset-bottom, 0px));
 }
 
@@ -878,7 +880,6 @@
 
 .setting-select {
   min-width: 128px;
-  padding-left: 12px;
   cursor: pointer;
 }
 
@@ -1170,13 +1171,31 @@
 @media (max-width: 859px) {
   .app-body { padding-top: env(safe-area-inset-top, 0px); }
 
-  .vault-root { flex-direction: column; }
+  .vault-root {
+    flex-direction: column;
+    min-height: 0;
+  }
 
   .vault-list { width: 100%; }
 
   .vault-detail {
     width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
     background: transparent;
+  }
+
+  .vault-detail .detail-pane,
+  .vault-detail .detail-scroll {
+    min-height: 0;
+    height: 100%;
+  }
+
+  .vault-detail .detail-scroll {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
   }
 
   .settings-layout {
@@ -1186,20 +1205,22 @@
   .settings-head { padding: max(16px, env(safe-area-inset-top, 0px)) 16px 12px; }
   .settings-head h1 { font-size: 25px; }
   .settings-body { padding: 0 16px calc(32px + env(safe-area-inset-bottom, 0px)); }
+  .settings-scroll { display: block; }
 
   .setting-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 14px;
     padding: 14px 0;
   }
   .setting-row > .segmented,
   .setting-row > .setting-select,
   .setting-row > .setting-value,
   .setting-row > .setting-control {
-    width: 100%;
+    width: auto;
   }
-  .setting-row > .setting-value { text-align: left; }
+  .setting-row > .setting-value { text-align: right; }
   .segmented { width: 100%; }
   .seg-btn { flex: 1; padding-left: 8px; padding-right: 8px; }
   .setting-row-stack { gap: 8px 14px; }
