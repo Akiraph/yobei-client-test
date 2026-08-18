@@ -4,10 +4,28 @@ plugins {
     id("rust")
 }
 
+val defaultAbiList = listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+val abiList = (findProperty("abiList") as? String)?.split(',') ?: defaultAbiList
+val defaultArchList = listOf("arm64", "arm", "x86", "x86_64")
+
 android {
     namespace = "com.akiraph.yobei"
     compileSdk = 36
     ndkVersion = "29.0.14206865"
+
+    flavorDimensions += "abi"
+    productFlavors {
+        create("universal") {
+            dimension = "abi"
+            ndk { abiFilters += abiList }
+        }
+        defaultArchList.forEachIndexed { index, arch ->
+            create(arch) {
+                dimension = "abi"
+                ndk { abiFilters += defaultAbiList[index] }
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.akiraph.yobei"

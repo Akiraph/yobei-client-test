@@ -1,3 +1,5 @@
+#[cfg(target_os = "android")]
+mod android_jni;
 mod commands;
 mod integration;
 mod platform;
@@ -17,7 +19,7 @@ use crate::integration::bridge::BridgeServer;
 
 struct AppState {
     db_path: PathBuf,
-    db_conn: Mutex<Option<rusqlite::Connection>>,
+    db_conn: Arc<Mutex<Option<rusqlite::Connection>>>,
     device_key: [u8; 32],
     active_keys: Arc<Mutex<Option<ActiveKeys>>>,
     last_activity: Arc<Mutex<Instant>>,
@@ -219,7 +221,7 @@ pub fn run() {
             app.manage(AppState {
                 db_path,
                 device_key,
-                db_conn: Mutex::new(None),
+                db_conn: Arc::new(Mutex::new(None)),
                 active_keys,
                 last_activity,
                 sync_runtime: Mutex::new(SyncRuntime {
@@ -230,6 +232,8 @@ pub fn run() {
                 #[cfg(desktop)]
                 browser_cache,
             });
+            #[cfg(target_os = "android")]
+            android_jni::register_runtime(app.state::<AppState>().inner());
             commands::security::spawn_auto_lock(app.handle());
             #[cfg(desktop)]
             commands::biometric::spawn_session_unlock_watcher(app.handle());
