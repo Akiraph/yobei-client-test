@@ -1,5 +1,6 @@
 use crate::AppState;
 use std::time::Duration;
+#[cfg(not(target_os = "android"))]
 use tauri::{Emitter, Manager};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use yobei_core::error::{ErrorCode, Result};
@@ -90,6 +91,10 @@ pub fn copy_to_clipboard(
     Ok(())
 }
 
+#[cfg(target_os = "android")]
+pub(crate) fn spawn_auto_lock(_app: &tauri::AppHandle) {}
+
+#[cfg(not(target_os = "android"))]
 pub(crate) fn spawn_auto_lock(app: &tauri::AppHandle) {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
@@ -124,6 +129,7 @@ pub(crate) fn spawn_auto_lock(app: &tauri::AppHandle) {
     });
 }
 
+#[cfg(not(target_os = "android"))]
 fn should_auto_lock(state: &AppState, auto_lock_min: u32) -> bool {
     if auto_lock_min == 0 {
         return false;

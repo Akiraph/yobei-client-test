@@ -6,7 +6,9 @@ mod platform;
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+#[cfg(not(target_os = "android"))]
+use std::time::Duration;
+use std::time::Instant;
 use tauri::Manager;
 #[cfg(desktop)]
 use tauri::WindowEvent;
@@ -34,6 +36,7 @@ impl AppState {
         *self.last_activity.lock().unwrap() = Instant::now();
     }
 
+    #[cfg(not(target_os = "android"))]
     fn idle_exceeded(&self, auto_lock_min: u32) -> bool {
         if auto_lock_min == 0 {
             return false;

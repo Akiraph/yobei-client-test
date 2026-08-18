@@ -1,6 +1,7 @@
 use crate::AppState;
 use crate::commands::setup::{refresh_confirm_clock, validate_pin};
 use crate::platform::biometric as plat;
+#[cfg(desktop)]
 use tauri::{Emitter, Manager};
 use yobei_core::error::{ErrorCode, Result};
 use yobei_core::security::keychain;
@@ -82,23 +83,28 @@ pub async fn unlock_with_biometric(
 /// `vault-unlocked` event the UI listens for.
 #[tauri::command]
 pub async fn try_silent_unlock(state: tauri::State<'_, AppState>) -> Result<bool> {
-    #[cfg(desktop)]
+    #[cfg(any(desktop, target_os = "android"))]
     {
         Ok(silent_unlock(&state).await)
     }
-    #[cfg(not(desktop))]
+    #[cfg(not(any(desktop, target_os = "android")))]
     {
         let _ = state;
         Ok(false)
     }
 }
 
-/// Decrypt the biometric secret with DPAPI (no Hello prompt) and, if that
-/// succeeds, install the active keys. Every failure path simply returns false.
-#[cfg(desktop)]
+/// Decrypt the platform-protected biometric secret without a second prompt and,
+/// if that succeeds, install the active keys. Every failure path simply returns
+/// false.
+#[cfg(any(desktop, target_os = "android"))]
 async fn silent_unlock(state: &AppState) -> bool {
     if state.active_keys.lock().unwrap().is_some() {
         return true;
+    }
+    #[cfg(target_os = "android")]
+    if !plat::is_available() {
+        return false;
     }
     let Ok(conn) = storage::open(&state.db_path) else {
         return false;
@@ -106,17 +112,21 @@ async fn silent_unlock(state: &AppState) -> bool {
     let Ok(Some(blob)) = storage::load_biometric_secret(&conn) else {
         return false;
     };
-    // Respect the periodic master-password confirmation: once it lapses, silent
-    // unlock stops so the user is forced to re-enter the master password.
-    let Ok(settings) = storage::load_security_settings(&conn, &state.device_key) else {
-        return false;
-    };
-    if keychain::bio_confirm_expired(
-        settings.last_password_confirm_at,
-        settings.confirm_days,
-        chrono::Utc::now().timestamp_millis(),
-    ) {
-        return false;
+    // Desktop periodically requires the master password again. On Android,
+    // the phone's existing unlock is the user-authentication boundary, so the
+    // app can restore the session without showing a second prompt.
+    #[cfg(desktop)]
+    {
+        let Ok(settings) = storage::load_security_settings(&conn, &state.device_key) else {
+            return false;
+        };
+        if keychain::bio_confirm_expired(
+            settings.last_password_confirm_at,
+            settings.confirm_days,
+            chrono::Utc::now().timestamp_millis(),
+        ) {
+            return false;
+        }
     }
     let Ok(json) = plat::unprotect_secret(&blob) else {
         return false;
