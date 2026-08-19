@@ -13,7 +13,11 @@
 !src-tauri/**
 !public/
 !public/**
-!*.md
+!README.md
+!README.zh-CN.md
+!CONTRIBUTING.md
+!SECURITY.md
+!CLA.md
 !LICENSE
 !package.json
 !bun.lock
@@ -22,3 +26,5 @@
 !vite.config.ts
 !scripts/
 !scripts/**
+
+/AGENTS.md

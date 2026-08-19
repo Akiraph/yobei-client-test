@@ -1,11 +1,10 @@
 import { Show, createSignal, onCleanup, onMount } from 'solid-js';
-import { t } from '../../core/locale';
+import { consumeScannerBack, scanner } from '../../core/scan';
 import { state, actions } from '../../core/state';
 import SettingsPage from '../settings/SettingsPage';
 import DetailPane from './DetailPane';
 import ItemList from './ItemList';
 import Sidebar from './Sidebar';
-import ScanPage from './ScanPage';
 import { addTotpFromUri } from './totp';
 import { useMediaQuery } from './useMediaQuery';
 
@@ -13,7 +12,6 @@ export default function VaultPage() {
   const mobile = useMediaQuery('(max-width: 859px)');
   const [pane, setPane] = createSignal<'list' | 'detail'>('list');
   const [sidebarOpen, setSidebarOpen] = createSignal(false);
-  const [scanning, setScanning] = createSignal(false);
   const [editingId, setEditingId] = createSignal<string | null | undefined>(undefined);
   let startX = 0;
   let startY = 0;
@@ -21,12 +19,13 @@ export default function VaultPage() {
   onMount(() => {
     function onPopState() {
       if (!mobile()) return;
-      if (state.settingsOpen) {
-        actions.toggleSettings(false);
+      if (consumeScannerBack()) return;
+      if (scanner.isOpen()) {
+        scanner.close();
         return;
       }
-      if (scanning()) {
-        setScanning(false);
+      if (state.settingsOpen) {
+        actions.toggleSettings(false);
         return;
       }
       if (sidebarOpen()) {
@@ -74,7 +73,7 @@ export default function VaultPage() {
 
   function openScanner() {
     setSidebarOpen(false);
-    setScanning(true);
+    scanner.open({ onResult: addTotpFromUri });
   }
 
   function onTouchStart(event: TouchEvent) {
@@ -98,33 +97,22 @@ export default function VaultPage() {
     <Show
       when={state.settingsOpen}
       fallback={
-        <Show
-          when={scanning()}
-          fallback={
-            <VaultLayout
-              mobile={mobile}
-              pane={pane}
-              sidebarOpen={sidebarOpen}
-              editingId={editingId}
-              onTouchStart={onTouchStart}
-              onTouchMove={onTouchMove}
-              onMenu={() => setSidebarOpen(true)}
-              onSettings={openSettings}
-              onScan={openScanner}
-              onCloseSidebar={() => setSidebarOpen(false)}
-              onSelect={openItem}
-              onNew={startNewItem}
-              onEdit={(id) => setEditingId(id)}
-              onCloseDetail={closeDetail}
-            />
-          }
-        >
-          <ScanPage
-            label={t('list.scan')}
-            onClose={() => setScanning(false)}
-            onResult={addTotpFromUri}
-          />
-        </Show>
+        <VaultLayout
+          mobile={mobile}
+          pane={pane}
+          sidebarOpen={sidebarOpen}
+          editingId={editingId}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onMenu={() => setSidebarOpen(true)}
+          onSettings={openSettings}
+          onScan={openScanner}
+          onCloseSidebar={() => setSidebarOpen(false)}
+          onSelect={openItem}
+          onNew={startNewItem}
+          onEdit={(id) => setEditingId(id)}
+          onCloseDetail={closeDetail}
+        />
       }
     >
       <SettingsPage onClose={() => actions.toggleSettings(false)} />

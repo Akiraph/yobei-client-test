@@ -6,6 +6,7 @@ import { t } from '../core/locale';
 import Dialog from '../ui/dialog';
 import { NotificationStack } from '../ui/notifications';
 import Titlebar from '../ui/titlebar';
+import ScannerHost from '../features/scan/ScannerHost';
 
 const AuthPage = lazy(() => import('../features/auth/AuthPage'));
 const VaultPage = lazy(() => import('../features/vault/VaultPage'));
@@ -47,7 +48,10 @@ export default function App() {
             <Show when={state.phase === 'loading'}><Loading /></Show>
             <Show when={state.phase === 'setup'}><AuthPage mode="setup" /></Show>
             <Show when={state.phase === 'locked'}><AuthPage mode="locked" /></Show>
-            <Show when={state.phase === 'unlocked'}><VaultPage /></Show>
+            <Show when={state.phase === 'unlocked'}>
+              <VaultPage />
+              <ScannerHost />
+            </Show>
           </Suspense>
         </Show>
       </div>

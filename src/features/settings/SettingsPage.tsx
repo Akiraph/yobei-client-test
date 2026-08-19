@@ -9,7 +9,6 @@ import { notify } from '../../ui/notifications';
 import PinInput from '../../ui/pin-input';
 import {
   AboutSection,
-  AppearanceSection,
   DataSection,
   ExtensionSection,
   GeneralSection,
@@ -17,11 +16,11 @@ import {
   SyncSection,
 } from './SettingsSections';
 
-type SectionId = 'appearance' | 'general' | 'security' | 'sync' | 'extension' | 'data' | 'about';
+type SectionId = 'general' | 'security' | 'sync' | 'extension' | 'data' | 'about';
 
 export default function SettingsPage(props: { onClose: () => void }) {
   const desktop = __YOBEI_DESKTOP__;
-  const [section, setSection] = createSignal<SectionId>('appearance');
+  const [section, setSection] = createSignal<SectionId>('general');
   const [version, setVersion] = createSignal('');
   const [restoreContent, setRestoreContent] = createSignal<string | null>(null);
   const [restorePin, setRestorePin] = createSignal('');
@@ -63,7 +62,6 @@ export default function SettingsPage(props: { onClose: () => void }) {
         <aside class="settings-nav">
           <SettingsHeader onClose={props.onClose} />
           <nav class="settings-nav-list">
-            <NavItem id="appearance" label={t('settings.appearance')} active={section() === 'appearance'} onClick={setSection} />
             <NavItem id="general" label={t('settings.general')} active={section() === 'general'} onClick={setSection} />
             <NavItem id="security" label={t('settings.security')} active={section() === 'security'} onClick={setSection} />
             <NavItem id="sync" label={t('settings.sync')} active={section() === 'sync'} onClick={setSection} />
@@ -83,7 +81,6 @@ export default function SettingsPage(props: { onClose: () => void }) {
         <main class="settings-content">
           <div class="settings-scroll">
             <div class="settings-body">
-              <Show when={section() === 'appearance'}><AppearanceSection /></Show>
               <Show when={section() === 'general'}><GeneralSection /></Show>
               <Show when={section() === 'security'}><SecuritySection /></Show>
               <Show when={section() === 'sync'}><SyncSection /></Show>

@@ -573,12 +573,7 @@
 
 .setup-actions { display: grid; gap: 10px; }
 .setup-title { font-size: 25px; margin-top: 16px; }
-.transfer-qr-wrap { display: grid; justify-items: center; gap: 10px; margin: 16px auto; }
 .transfer-qr { display: block; width: min(240px, 100%); height: auto; border-radius: 4px; }
-.transfer-camera { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #111; border-radius: 6px; }
-.qr-scanner { display: grid; gap: 10px; width: 100%; }
-.qr-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.qr-actions .btn, .transfer-qr-wrap .btn { display: inline-flex; align-items: center; gap: 6px; }
 .qr-file-input { display: none; }
 
 /* ── 扫码页:全屏相机 + 方形取景框 + 上下移动扫描线 ─────────── */
@@ -863,14 +858,17 @@
   min-width: 0;
 }
 
-.setting-row-stack .setting-control {
-  grid-column: 2;
-  grid-row: 1;
+.setting-control {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.setting-row-stack .setting-control {
+  grid-column: 2;
+  grid-row: 1;
 }
 
 .setting-row-stack > :not(.setting-label):not(.setting-control),

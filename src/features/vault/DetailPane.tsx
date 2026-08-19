@@ -124,13 +124,17 @@ function RecoveryCodes(props: { value?: string }) {
 }
 
 function TotpDisplay(props: { secret: string }) {
+  // r = 15.9155 → circumference ≈ 100, so dash values are plain percentages.
+  const RING_RADIUS = 15.9155;
   const [code, setCode] = createSignal('');
   const [period, setPeriod] = createSignal(30);
   const [remaining, setRemaining] = createSignal(30);
+  const [copied, setCopied] = createSignal(false);
+  let copiedTimer: number | undefined;
 
-  async function refresh() {
+  async function refresh(secret: string) {
     try {
-      const result = await backend.computeTotp(props.secret);
+      const result = await backend.computeTotp(secret);
       setCode(result.code);
       setPeriod(result.period || 30);
     } catch {
@@ -139,26 +143,79 @@ function TotpDisplay(props: { secret: string }) {
   }
 
   createEffect(() => {
-    void refresh();
+    const secret = props.secret;
+    let windowIndex = Math.floor(Date.now() / 1000 / period());
+    void refresh(secret);
     const timer = window.setInterval(() => {
       const seconds = Math.floor(Date.now() / 1000);
-      const next = period() - (seconds % period());
-      setRemaining(next);
-      if (next === period()) void refresh();
-    }, 1000);
+      const current = period();
+      setRemaining(current - (seconds % current));
+      const next = Math.floor(seconds / current);
+      if (next !== windowIndex) {
+        windowIndex = next;
+        void refresh(secret);
+      }
+    }, 250);
     onCleanup(() => window.clearInterval(timer));
   });
 
+  onCleanup(() => {
+    if (copiedTimer) window.clearTimeout(copiedTimer);
+  });
+
   async function copy() {
-    if (code()) await navigator.clipboard.writeText(code()).catch(() => {});
+    const value = code();
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      if (copiedTimer) window.clearTimeout(copiedTimer);
+      copiedTimer = window.setTimeout(() => setCopied(false), 1200);
+    } catch {
+      // Clipboard access may be denied; the code stays visible for manual copy.
+    }
   }
 
+  const fraction = () => Math.max(0, Math.min(1, remaining() / period()));
+  const low = () => remaining() <= 5;
+
   return (
-    <div class="totp-display" role="button" tabindex="0" onClick={() => void copy()} aria-label={t('detail.totp')}>
-      <span class="totp-code">{code() ? `${code().slice(0, 3)} ${code().slice(3)}` : '------'}</span>
-      <span class="totp-timer">{remaining()}</span>
+    <div
+      class="totp-display"
+      classList={{ copied: copied() }}
+      role="button"
+      tabindex="0"
+      onClick={() => void copy()}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          void copy();
+        }
+      }}
+      aria-label={t('detail.totpCopy')}
+    >
+      <span class="totp-code">{code() ? formatCode(code()) : '------'}</span>
+      <span class="totp-ring" classList={{ low: low() }} role="timer">
+        <svg viewBox="0 0 36 36" aria-hidden="true">
+          <circle class="totp-ring-track" cx="18" cy="18" r={RING_RADIUS} />
+          <circle
+            class="totp-ring-progress"
+            cx="18"
+            cy="18"
+            r={RING_RADIUS}
+            stroke-dasharray="100"
+            stroke-dashoffset={100 - fraction() * 100}
+          />
+        </svg>
+        <span class="totp-ring-count">{remaining()}</span>
+      </span>
     </div>
   );
+}
+
+function formatCode(code: string): string {
+  const middle = Math.ceil(code.length / 2);
+  return `${code.slice(0, middle)} ${code.slice(middle)}`;
 }
 
 function confirmDelete(item: VaultItem): void {

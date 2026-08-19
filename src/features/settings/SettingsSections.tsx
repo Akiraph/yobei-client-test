@@ -11,39 +11,22 @@ import {
 import { errorKey } from '../../core/errors';
 import { hideDialog, showDialog } from '../../core/dialog';
 import { locale, locales, setLocale, t } from '../../core/locale';
+import { scanner } from '../../core/scan';
 import { actions, state } from '../../core/state';
 import type { Theme } from '../../core/types';
 import { decodeQrImage } from '../../core/qr';
 import CopyButton from '../../ui/copy-button';
+import { IconScan, IconUpload } from '../../ui/icons';
 import { notify } from '../../ui/notifications';
 import Select from '../../ui/select';
 
-export function AppearanceSection() {
-  return (
-    <Section title={t('settings.appearance')}>
-      <SettingRow name={t('settings.theme')} desc={t('settings.themeDesc')}>
-        <div class="segmented">
-          <ThemeButton value="light" label={t('settings.light')} />
-          <ThemeButton value="dark" label={t('settings.dark')} />
-          <ThemeButton value="system" label={t('settings.system')} />
-        </div>
-      </SettingRow>
-      <SelectRow
-        name={t('settings.language')}
-        desc={t('settings.languageDesc')}
-        value={locale()}
-        options={locales().map((item) => ({ value: item.value, label: item.label }))}
-        onChange={setLocale}
-      />
-    </Section>
-  );
-}
-
 export function GeneralSection() {
+  const desktop = __YOBEI_DESKTOP__;
   const [prefs, setPrefs] = createSignal<AppPrefs>({ autostart: false, silentStart: false });
-  const [loaded, setLoaded] = createSignal(false);
+  const [loaded, setLoaded] = createSignal(!desktop);
 
   onMount(() => {
+    if (!desktop) return;
     void backend.getAppPrefs()
       .then((value) => {
         setPrefs(value);
@@ -65,19 +48,35 @@ export function GeneralSection() {
 
   return (
     <Section title={t('settings.general')}>
-      <Show when={loaded()} fallback={<div class="setting-note">{t('common.loading')}</div>}>
-        <ToggleRow
-          name={t('settings.autostart')}
-          desc={t('settings.autostartDesc')}
-          value={prefs().autostart}
-          onChange={(value) => void update({ autostart: value })}
-        />
-        <ToggleRow
-          name={t('settings.silentStart')}
-          desc={t('settings.silentStartDesc')}
-          value={prefs().silentStart}
-          onChange={(value) => void update({ silentStart: value })}
-        />
+      <SettingRow name={t('settings.theme')} desc={t('settings.themeDesc')}>
+        <div class="segmented">
+          <ThemeButton value="light" label={t('settings.light')} />
+          <ThemeButton value="dark" label={t('settings.dark')} />
+          <ThemeButton value="system" label={t('settings.system')} />
+        </div>
+      </SettingRow>
+      <SelectRow
+        name={t('settings.language')}
+        desc={t('settings.languageDesc')}
+        value={locale()}
+        options={locales().map((item) => ({ value: item.value, label: item.label }))}
+        onChange={setLocale}
+      />
+      <Show when={desktop}>
+        <Show when={loaded()} fallback={<div class="setting-note">{t('common.loading')}</div>}>
+          <ToggleRow
+            name={t('settings.autostart')}
+            desc={t('settings.autostartDesc')}
+            value={prefs().autostart}
+            onChange={(value) => void update({ autostart: value })}
+          />
+          <ToggleRow
+            name={t('settings.silentStart')}
+            desc={t('settings.silentStartDesc')}
+            value={prefs().silentStart}
+            onChange={(value) => void update({ silentStart: value })}
+          />
+        </Show>
       </Show>
     </Section>
   );
@@ -128,7 +127,6 @@ export function SyncSection() {
   const [serverUrl, setServerUrl] = createSignal('');
   const [setupCode, setSetupCode] = createSignal('');
   const [deviceName, setDeviceName] = createSignal('');
-  const [transferCode, setTransferCode] = createSignal('');
   const [devices, setDevices] = createSignal<AuthorizedDevice[]>([]);
   const [busy, setBusy] = createSignal(false);
 
@@ -183,14 +181,13 @@ export function SyncSection() {
     notify[success ? 'ok' : 'error'](t(success ? 'settings.syncSuccess' : 'error.syncFailed'));
   }
 
-  async function approveTransfer() {
-    const qr = transferCode().trim();
-    if (!qr) return;
+  async function approveTransfer(qr: string) {
+    const value = qr.trim();
+    if (!value || busy()) return;
 
     setBusy(true);
     try {
-      await backend.approveDeviceTransfer(qr);
-      setTransferCode('');
+      await backend.approveDeviceTransfer(value);
       await refreshDevices();
       notify.ok(t('settings.deviceApproved'));
     } catch (error) {
@@ -200,13 +197,18 @@ export function SyncSection() {
     }
   }
 
+  function scanTransferCode() {
+    scanner.open({ onResult: (value) => approveTransfer(value) });
+  }
+
   async function readTransferImage(event: Event) {
-    const file = (event.currentTarget as HTMLInputElement).files?.[0];
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
     if (!file) return;
 
     try {
-      setTransferCode(await decodeQrImage(file));
-      notify.ok(t('common.done'));
+      await approveTransfer(await decodeQrImage(file));
     } catch (error) {
       notify.error(t(errorKey(error, 'invalid_qr')));
     }
@@ -281,25 +283,19 @@ export function SyncSection() {
             {state.sync.syncing ? t('settings.syncing') : t('settings.syncNow')}
           </button>
         </SettingRow>
-        <div class="setting-row setting-row-stack">
-          <SettingLabel name={t('settings.addDevice')} desc={t('settings.addDeviceDesc')} />
-          <div class="setting-inline">
-            <input
-              class="fog-input"
-              value={transferCode()}
-              onInput={(event) => setTransferCode(event.currentTarget.value)}
-              placeholder={t('settings.scanDevice')}
-              aria-label={t('settings.scanDevice')}
-            />
+        <SettingRow name={t('settings.addDevice')} desc={t('settings.addDeviceDesc')}>
+          <div class="setting-control">
             <label class="btn btn-ghost">
+              <IconUpload size={14} />
               {t('qr.uploadImage')}
               <input class="qr-file-input" type="file" accept="image/*" onChange={(event) => void readTransferImage(event)} />
             </label>
-            <button class="btn btn-primary" onClick={() => void approveTransfer()} disabled={busy() || !transferCode().trim()}>
-              {t('settings.scanDevice')}
+            <button class="btn btn-primary" onClick={scanTransferCode} disabled={busy()}>
+              <IconScan size={14} />
+              {t('settings.scanToAdd')}
             </button>
           </div>
-        </div>
+        </SettingRow>
         <div class="setting-row setting-row-stack">
           <SettingLabel name={t('settings.devices')} desc={t('settings.devicesDesc')} />
           <div class="device-list">

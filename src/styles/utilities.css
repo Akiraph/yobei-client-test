@@ -74,30 +74,49 @@
 
 .totp-display.copied .totp-code { color: var(--jade); }
 
-.totp-display .totp-code.totp-error {
-  font-size: 13px;
-  letter-spacing: 0.02em;
-  color: var(--danger);
-  word-break: break-all;
-}
-
-.totp-timer {
-  width: 24px;
-  height: 24px;
+.totp-ring {
   position: relative;
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
 }
 
-.totp-timer svg { transform: rotate(-90deg); display: block; }
+.totp-ring svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
 
-.totp-timer .timer-bg   { fill: none; stroke: var(--fog-200); stroke-width: 2; }
-.totp-timer .timer-fill {
+.totp-ring-track {
+  fill: none;
+  stroke: var(--fog-200);
+  stroke-width: 3;
+}
+
+.totp-ring-progress {
   fill: none;
   stroke: var(--sky);
-  stroke-width: 2;
+  stroke-width: 3;
   stroke-linecap: round;
-  transition: stroke-dashoffset 1s linear;
+  transition: stroke-dashoffset 0.25s linear, stroke var(--dur-fast) var(--ease-fog);
 }
+
+.totp-ring.low .totp-ring-progress { stroke: var(--amber); }
+
+.totp-ring-count {
+  position: relative;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fog-500);
+}
+
+.totp-ring.low .totp-ring-count { color: var(--amber); }
 
 .unlock-stage {
   display: flex;
@@ -304,14 +323,24 @@
   color: var(--fog-800);
 }
 
-.editor-head {
+.editor-header {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.editor-head .detail-back {
+.editor-header .detail-back {
   position: static;
+  flex-shrink: 0;
+  margin-left: -8px;
+}
+
+.editor-header .editor-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .type-switch {
@@ -518,15 +547,6 @@
 
 .new-btn-trigger {
   gap: 7px;
-}
-
-.new-btn-chevron {
-  color: var(--fog-500);
-  transition: transform var(--dur-fast) var(--ease-fog);
-}
-
-.new-btn-chevron.open {
-  transform: rotate(180deg);
 }
 
 .new-btn-menu {

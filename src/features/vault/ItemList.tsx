@@ -5,7 +5,7 @@ import { errorKey } from '../../core/errors';
 import { t } from '../../core/locale';
 import { actions, state } from '../../core/state';
 import type { VaultItem } from '../../core/types';
-import { IconCamera, IconChevronDown, IconMenu, IconPlus, IconScan, IconSearch, IconUpload } from '../../ui/icons';
+import { IconCamera, IconMenu, IconPlus, IconScan, IconSearch, IconUpload } from '../../ui/icons';
 import { notify } from '../../ui/notifications';
 import SiteIcon from '../../ui/site-icon';
 import { addTotpFromUri } from './totp';
@@ -84,7 +84,6 @@ export default function ItemList(props: ItemListProps) {
           >
             <IconPlus size={14} />
             {t('list.new')}
-            <IconChevronDown class="new-btn-chevron" classList={{ open: menuOpen() }} size={14} />
           </button>
           <Show when={menuOpen()}>
             <div ref={menu} class="new-btn-menu" role="menu">
