@@ -16,7 +16,7 @@ import { actions, state } from '../../core/state';
 import type { Theme } from '../../core/types';
 import { decodeQrImage } from '../../core/qr';
 import CopyButton from '../../ui/copy-button';
-import { IconScan, IconUpload } from '../../ui/icons';
+import { IconPlus, IconScan, IconUpload } from '../../ui/icons';
 import { notify } from '../../ui/notifications';
 import Select from '../../ui/select';
 
@@ -129,6 +129,7 @@ export function SyncSection() {
   const [deviceName, setDeviceName] = createSignal('');
   const [devices, setDevices] = createSignal<AuthorizedDevice[]>([]);
   const [busy, setBusy] = createSignal(false);
+  const [addMenuOpen, setAddMenuOpen] = createSignal(false);
 
   onMount(() => {
     void initialize();
@@ -284,16 +285,31 @@ export function SyncSection() {
           </button>
         </SettingRow>
         <SettingRow name={t('settings.addDevice')} desc={t('settings.addDeviceDesc')}>
-          <div class="setting-control">
-            <label class="btn btn-ghost">
-              <IconUpload size={14} />
-              {t('qr.uploadImage')}
-              <input class="qr-file-input" type="file" accept="image/*" onChange={(event) => void readTransferImage(event)} />
-            </label>
-            <button class="btn btn-primary" onClick={scanTransferCode} disabled={busy()}>
-              <IconScan size={14} />
-              {t('settings.scanToAdd')}
+          <div class="add-device-menu">
+            <button
+              class="icon-btn add-device-trigger"
+              type="button"
+              aria-label={t('settings.addDevice')}
+              aria-haspopup="menu"
+              aria-expanded={addMenuOpen()}
+              disabled={busy()}
+              onClick={() => setAddMenuOpen((open) => !open)}
+            >
+              <IconPlus size={18} />
             </button>
+            <Show when={addMenuOpen()}>
+              <div class="add-device-options" role="menu">
+                <label class="add-device-option" role="menuitem">
+                  <IconUpload size={14} />
+                  {t('qr.uploadImage')}
+                  <input class="qr-file-input" type="file" accept="image/*" onChange={(event) => { setAddMenuOpen(false); void readTransferImage(event); }} />
+                </label>
+                <button class="add-device-option" type="button" role="menuitem" onClick={() => { setAddMenuOpen(false); scanTransferCode(); }}>
+                  <IconScan size={14} />
+                  {t('settings.scanToAdd')}
+                </button>
+              </div>
+            </Show>
           </div>
         </SettingRow>
         <div class="setting-row setting-row-stack">

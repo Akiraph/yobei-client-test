@@ -17,6 +17,12 @@ export default function VaultPage() {
   let startY = 0;
 
   onMount(() => {
+    // Each mobile overlay gets a history entry. This makes Android's system
+    // back gesture unwind the current UI layer before it can leave the vault.
+    if (mobile() && !history.state?.yobei) {
+      history.replaceState({ ...(history.state ?? {}), yobei: 'vault' }, '');
+    }
+
     function onPopState() {
       if (!mobile()) return;
       if (consumeScannerBack()) return;
@@ -69,6 +75,14 @@ export default function VaultPage() {
   function openSettings() {
     setSidebarOpen(false);
     actions.toggleSettings(true);
+    if (mobile() && history.state?.yobei !== 'settings') {
+      history.pushState({ ...(history.state ?? {}), yobei: 'settings' }, '');
+    }
+  }
+
+  function closeSettings() {
+    if (mobile() && history.state?.yobei === 'settings') history.back();
+    else actions.toggleSettings(false);
   }
 
   function openScanner() {
@@ -115,7 +129,7 @@ export default function VaultPage() {
         />
       }
     >
-      <SettingsPage onClose={() => actions.toggleSettings(false)} />
+      <SettingsPage onClose={closeSettings} />
     </Show>
   );
 }

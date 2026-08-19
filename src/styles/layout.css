@@ -681,6 +681,43 @@
 .device-list { display: grid; gap: 8px; width: 100%; }
 .device-row { display: flex; min-height: 46px; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--fog-200); }
 
+.add-device-menu { position: relative; }
+.add-device-trigger { color: var(--fog-700); background: var(--fog-150); }
+.add-device-options {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 10;
+  min-width: 144px;
+  padding: 4px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(16px);
+  animation: add-device-menu-in 140ms var(--ease-fog) both;
+}
+.add-device-option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 36px;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--fog-700);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.add-device-option:hover { background: var(--fog-150); }
+@keyframes add-device-menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .setup-done-icon {
   width: 72px;
   height: 72px;
@@ -785,6 +822,15 @@
   color: var(--fog-800);
   font-weight: 500;
   backdrop-filter: blur(8px);
+}
+
+.settings-panel {
+  animation: settings-panel-in 220ms var(--ease-fog) both;
+}
+
+@keyframes settings-panel-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .settings-body {
@@ -1181,6 +1227,13 @@
     flex: 1 1 auto;
     min-height: 0;
     background: transparent;
+    transform-origin: center top;
+    animation: mobile-detail-expand 280ms var(--ease-fog) both;
+  }
+
+  @keyframes mobile-detail-expand {
+    from { opacity: 0; transform: scale(.96) translateY(18px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
   }
 
   .vault-detail .detail-pane,
@@ -1200,10 +1253,39 @@
     display: flex;
     flex-direction: column;
   }
-  .settings-head { padding: max(16px, env(safe-area-inset-top, 0px)) 16px 12px; }
+  .settings-nav {
+    width: 100%;
+    padding: max(16px, env(safe-area-inset-top, 0px)) 16px 8px;
+    gap: 10px;
+    overflow: hidden;
+    border-right: 0;
+  }
+  .settings-head { padding: 0; }
   .settings-head h1 { font-size: 25px; }
+  .settings-nav-list {
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 2px 0 6px;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+  .settings-nav-list::-webkit-scrollbar { display: none; }
+  .settings-nav-item {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 7px 13px;
+    border-radius: 99px;
+    font-size: 13px;
+    scroll-snap-align: start;
+    transition: transform 180ms var(--ease-spring), background 180ms var(--ease-fog), color 180ms var(--ease-fog);
+  }
+  .settings-nav-item.active { transform: scale(1.04); }
   .settings-body { padding: 0 16px calc(32px + env(safe-area-inset-bottom, 0px)); }
   .settings-scroll { display: block; }
+  .settings-mobile-section { scroll-margin-top: 8px; }
+  .settings-mobile-section + .settings-mobile-section { margin-top: 34px; }
+  .settings-mobile-section .settings-section { margin-bottom: 0; }
 
   .setting-row {
     display: grid;
@@ -1238,6 +1320,16 @@
 
   .detail-scroll { padding-left: 20px; padding-right: 20px; }
 
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-panel,
+  .vault-detail,
+  .add-device-options { animation: none; }
+
+  .settings-nav-item,
+  .vault-sidebar.drawer,
+  .sidebar-scrim { transition: none; }
 }
 
 @media (hover: none) {

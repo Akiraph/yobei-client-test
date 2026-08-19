@@ -1,10 +1,11 @@
-import { Show, createSignal, onMount } from 'solid-js';
+import { For, Show, createSignal, onMount } from 'solid-js';
 import { backend } from '../../core/backend';
 import { errorKey } from '../../core/errors';
 import { t } from '../../core/locale';
 import { actions } from '../../core/state';
 import Dialog from '../../ui/dialog';
 import { IconBack } from '../../ui/icons';
+import { useMediaQuery } from '../vault/useMediaQuery';
 import { notify } from '../../ui/notifications';
 import PinInput from '../../ui/pin-input';
 import {
@@ -20,7 +21,10 @@ type SectionId = 'general' | 'security' | 'sync' | 'extension' | 'data' | 'about
 
 export default function SettingsPage(props: { onClose: () => void }) {
   const desktop = __YOBEI_DESKTOP__;
+  const mobile = useMediaQuery('(max-width: 859px)');
   const [section, setSection] = createSignal<SectionId>('general');
+  const sectionElements = new Map<SectionId, HTMLElement>();
+  const navElements = new Map<SectionId, HTMLButtonElement>();
   const [version, setVersion] = createSignal('');
   const [restoreContent, setRestoreContent] = createSignal<string | null>(null);
   const [restorePin, setRestorePin] = createSignal('');
@@ -56,37 +60,61 @@ export default function SettingsPage(props: { onClose: () => void }) {
     }
   }
 
+  const navItems: Array<{ id: SectionId; label: string }> = [
+    { id: 'general', label: t('settings.general') },
+    { id: 'security', label: t('settings.security') },
+    { id: 'sync', label: t('settings.sync') },
+    ...(desktop ? [{ id: 'extension' as const, label: t('settings.extension') }] : []),
+    { id: 'data', label: t('settings.data') },
+    { id: 'about', label: t('settings.about') },
+  ];
+
+  function selectSection(id: SectionId) {
+    setSection(id);
+    if (mobile()) {
+      navElements.get(id)?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      sectionElements.get(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function sectionContent(id: SectionId) {
+    switch (id) {
+      case 'general': return <GeneralSection />;
+      case 'security': return <SecuritySection />;
+      case 'sync': return <SyncSection />;
+      case 'extension': return desktop ? <ExtensionSection /> : null;
+      case 'data': return <DataSection onRestore={chooseRestore} />;
+      case 'about': return <AboutSection version={version()} />;
+    }
+  }
+
   return (
     <div class="settings-root fog-reveal">
       <div class="settings-layout">
         <aside class="settings-nav">
           <SettingsHeader onClose={props.onClose} />
-          <nav class="settings-nav-list">
-            <NavItem id="general" label={t('settings.general')} active={section() === 'general'} onClick={setSection} />
-            <NavItem id="security" label={t('settings.security')} active={section() === 'security'} onClick={setSection} />
-            <NavItem id="sync" label={t('settings.sync')} active={section() === 'sync'} onClick={setSection} />
-            <Show when={desktop}>
-              <NavItem
-                id="extension"
-                label={t('settings.extension')}
-                active={section() === 'extension'}
-                onClick={setSection}
-              />
-            </Show>
-            <NavItem id="data" label={t('settings.data')} active={section() === 'data'} onClick={setSection} />
-            <NavItem id="about" label={t('settings.about')} active={section() === 'about'} onClick={setSection} />
+          <nav class="settings-nav-list" aria-label={t('settings.title')}>
+            <For each={navItems}>
+              {(item) => <NavItem {...item} ref={(element) => navElements.set(item.id, element)} active={section() === item.id} onClick={selectSection} />}
+            </For>
           </nav>
         </aside>
 
         <main class="settings-content">
           <div class="settings-scroll">
-            <div class="settings-body">
-              <Show when={section() === 'general'}><GeneralSection /></Show>
-              <Show when={section() === 'security'}><SecuritySection /></Show>
-              <Show when={section() === 'sync'}><SyncSection /></Show>
-              <Show when={section() === 'extension' && desktop}><ExtensionSection /></Show>
-              <Show when={section() === 'data'}><DataSection onRestore={chooseRestore} /></Show>
-              <Show when={section() === 'about'}><AboutSection version={version()} /></Show>
+            <div class={`settings-body${mobile() ? ' settings-body-mobile' : ''}`}>
+              <Show
+                when={mobile()}
+                fallback={<Show when={section()} keyed>{(id) => <div class="settings-panel">{sectionContent(id)}</div>}</Show>}
+              >
+                <For each={navItems}>
+                  {(item) => (
+                    <div ref={(element) => sectionElements.set(item.id, element)} class="settings-mobile-section">
+                      {sectionContent(item.id)}
+                    </div>
+                  )}
+                </For>
+              </Show>
             </div>
           </div>
         </main>
@@ -126,9 +154,10 @@ function SettingsHeader(props: { onClose: () => void }) {
   );
 }
 
-function NavItem(props: { id: SectionId; label: string; active: boolean; onClick: (id: SectionId) => void }) {
+function NavItem(props: { id: SectionId; label: string; active: boolean; onClick: (id: SectionId) => void; ref?: (element: HTMLButtonElement) => void }) {
   return (
     <button
+      ref={props.ref}
       class={`settings-nav-item${props.active ? ' active' : ''}`}
       onClick={() => props.onClick(props.id)}
     >
