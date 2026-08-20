@@ -2,13 +2,15 @@ import { createStore } from 'solid-js/store';
 import { backend } from './backend';
 import { errorCode } from './errors';
 import { readSettings, writeSettings, type AppSettings } from './settings';
-import type { AppPhase, ItemData, ItemType, SyncState, Theme, VaultItem } from './types';
+import type { AppPhase, ItemData, ItemType, SettingsSection, SyncState, Theme, VaultItem } from './types';
 
 interface AppState {
   phase: AppPhase;
   theme: Theme;
   settings: AppSettings;
   settingsOpen: boolean;
+  // Mobile settings are hierarchical: null means the root list, a value means a subpage.
+  settingsSection: SettingsSection | null;
   condensing: boolean;
   items: VaultItem[];
   contents: Record<string, ItemData>;
@@ -37,6 +39,7 @@ export const [state, setState] = createStore<AppState>({
   theme: initialSettings.theme,
   settings: initialSettings,
   settingsOpen: false,
+  settingsSection: null,
   condensing: false,
   items: [],
   contents: {},
@@ -144,7 +147,11 @@ export const actions = {
   },
 
   toggleSettings(open?: boolean): void {
-    setState('settingsOpen', open ?? !state.settingsOpen);
+    setState({ settingsOpen: open ?? !state.settingsOpen, settingsSection: null });
+  },
+
+  openSettingsSection(section: SettingsSection | null): void {
+    setState('settingsSection', section);
   },
 
   select(id: string | null): void {

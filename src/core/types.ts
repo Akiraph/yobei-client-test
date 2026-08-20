@@ -1,6 +1,7 @@
 export type ItemType = 'login' | 'note';
 export type AppPhase = 'loading' | 'setup' | 'locked' | 'unlocked';
 export type Theme = 'light' | 'dark' | 'system';
+export type SettingsSection = 'general' | 'security' | 'sync' | 'extension' | 'data' | 'advanced' | 'about';
 
 export interface ItemData {
   title: string;

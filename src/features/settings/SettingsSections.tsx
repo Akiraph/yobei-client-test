@@ -16,7 +16,7 @@ import { actions, state } from '../../core/state';
 import type { Theme } from '../../core/types';
 import { decodeQrImage } from '../../core/qr';
 import CopyButton from '../../ui/copy-button';
-import { IconPlus, IconScan, IconUpload } from '../../ui/icons';
+import { IconMonitor, IconMoon, IconPlus, IconScan, IconSun, IconUpload } from '../../ui/icons';
 import { notify } from '../../ui/notifications';
 import Select from '../../ui/select';
 
@@ -49,10 +49,10 @@ export function GeneralSection() {
   return (
     <Section title={t('settings.general')}>
       <SettingRow name={t('settings.theme')} desc={t('settings.themeDesc')}>
-        <div class="segmented">
-          <ThemeButton value="light" label={t('settings.light')} />
-          <ThemeButton value="dark" label={t('settings.dark')} />
-          <ThemeButton value="system" label={t('settings.system')} />
+        <div class="segmented" role="group" aria-label={t('settings.theme')}>
+          <ThemeButton value="light" label={t('settings.light')} icon={<IconSun size={17} />} />
+          <ThemeButton value="dark" label={t('settings.dark')} icon={<IconMoon size={17} />} />
+          <ThemeButton value="system" label={t('settings.system')} icon={<IconMonitor size={17} />} />
         </div>
       </SettingRow>
       <SelectRow
@@ -469,7 +469,7 @@ export function ExtensionSection() {
   );
 }
 
-export function DataSection(props: { onRestore: () => void }) {
+export function DataSection() {
   const [csv, setCsv] = createSignal<CsvPreview | null>(null);
   const [csvContent, setCsvContent] = createSignal('');
   const [busy, setBusy] = createSignal(false);
@@ -498,41 +498,6 @@ export function DataSection(props: { onRestore: () => void }) {
       setCsv(null);
       setCsvContent('');
       await actions.reloadItems();
-    } catch (error) {
-      notify.error(t(errorKey(error, 'file_failed')));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function confirmPlaintextExport() {
-    showDialog(
-      t('settings.exportPlainTitle'),
-      <>
-        <p class="dialog-desc">{t('settings.plaintextWarning')}</p>
-        <div class="dialog-actions">
-          <button class="btn btn-ghost" onClick={hideDialog}>{t('common.cancel')}</button>
-          <button class="btn btn-danger" onClick={() => { hideDialog(); void exportPlaintext(); }}>
-            {t('settings.continueExport')}
-          </button>
-        </div>
-      </>,
-    );
-  }
-
-  async function exportEncrypted() {
-    await saveExport('yobei-vault.yobei', () => backend.exportVault());
-  }
-
-  async function exportPlaintext() {
-    await saveExport('yobei-export.csv', () => backend.exportCsv());
-  }
-
-  async function saveExport(fileName: string, load: () => Promise<string>) {
-    setBusy(true);
-    try {
-      const path = await backend.saveTextFile(fileName, await load());
-      if (path !== null) notify.ok(t('common.done'));
     } catch (error) {
       notify.error(t(errorKey(error, 'file_failed')));
     } finally {
@@ -599,23 +564,64 @@ export function DataSection(props: { onRestore: () => void }) {
           </div>
         </Show>
       </div>
-      <SettingRow name={t('settings.restoreTitle')} desc={t('settings.restoreDescription')}>
-        <button class="btn btn-ghost" onClick={props.onRestore} disabled={busy()}>
-          {t('settings.restoreChoose')}
-        </button>
-      </SettingRow>
       <SettingRow name={t('settings.exportTitle')} desc={t('settings.exportDescription')}>
-        <button class="btn btn-ghost" onClick={() => void exportEncrypted()} disabled={busy()}>
-          {t('common.export')}
-        </button>
-      </SettingRow>
-      <SettingRow name={t('settings.exportPlainTitle')} desc={t('settings.exportPlainDescription')}>
-        <button class="btn btn-ghost" onClick={confirmPlaintextExport} disabled={busy()}>
+        <button class="btn btn-ghost" onClick={() => void saveExport('yobei-vault.yobei', () => backend.exportVault(), setBusy)} disabled={busy()}>
           {t('common.export')}
         </button>
       </SettingRow>
     </Section>
   );
+}
+
+// Rare and irreversible operations live one level deeper, away from daily settings.
+export function AdvancedSection(props: { onRestore: () => void }) {
+  const [busy, setBusy] = createSignal(false);
+
+  function confirmPlaintextExport() {
+    showDialog(
+      t('settings.exportPlainTitle'),
+      <>
+        <p class="dialog-desc">{t('settings.plaintextWarning')}</p>
+        <div class="dialog-actions">
+          <button class="btn btn-ghost" onClick={hideDialog}>{t('common.cancel')}</button>
+          <button
+            class="btn btn-danger"
+            onClick={() => { hideDialog(); void saveExport('yobei-export.csv', () => backend.exportCsv(), setBusy); }}
+          >
+            {t('settings.continueExport')}
+          </button>
+        </div>
+      </>,
+    );
+  }
+
+  return (
+    <Section title={t('settings.advanced')}>
+      <div class="setting-note setting-warning">{t('settings.advancedWarning')}</div>
+      <SettingRow name={t('settings.restoreTitle')} desc={t('settings.restoreDescription')}>
+        <button class="btn btn-ghost" onClick={props.onRestore} disabled={busy()}>
+          {t('settings.restoreChoose')}
+        </button>
+      </SettingRow>
+      <SettingRow name={t('settings.exportPlainTitle')} desc={t('settings.exportPlainDescription')}>
+        <button class="btn btn-danger" onClick={confirmPlaintextExport} disabled={busy()}>
+          {t('common.export')}
+        </button>
+      </SettingRow>
+    </Section>
+  );
+}
+
+async function saveExport(fileName: string, load: () => Promise<string>, setBusy: (value: boolean) => void) {
+  setBusy(true);
+  try {
+    const path = await backend.saveTextFile(fileName, await load());
+    if (path !== null) notify.ok(t('common.done'));
+  } catch (error) {
+    notify.error(t(errorKey(error, 'file_failed')));
+  } finally {
+    setBusy(false);
+  }
 }
 
 export function AboutSection(props: { version: string }) {
@@ -655,13 +661,16 @@ function SettingLabel(props: { name: string; desc: string }) {
   );
 }
 
-function ThemeButton(props: { value: Theme; label: string }) {
+function ThemeButton(props: { value: Theme; label: string; icon: JSX.Element }) {
   return (
     <button
-      class={`seg-btn${state.theme === props.value ? ' active' : ''}`}
+      class={`seg-btn seg-btn-icon${state.theme === props.value ? ' active' : ''}`}
       onClick={() => actions.setTheme(props.value)}
+      aria-label={props.label}
+      aria-pressed={state.theme === props.value}
+      title={props.label}
     >
-      {props.label}
+      {props.icon}
     </button>
   );
 }

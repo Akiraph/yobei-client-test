@@ -31,7 +31,8 @@ export default function VaultPage() {
         return;
       }
       if (state.settingsOpen) {
-        actions.toggleSettings(false);
+        if (state.settingsSection) actions.openSettingsSection(null);
+        else actions.toggleSettings(false);
         return;
       }
       if (sidebarOpen()) {

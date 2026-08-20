@@ -10,9 +10,13 @@
   --fog-800: #1F2A3D;
   --fog-900: #0F1726;
 
-  --sky-100: #E7F0F8;
-  --sky-200: #DCE8F4;
-  --sky-300: #CCDDEE;
+  /* 画布:白为基调,叠三层干净的天蓝(不发灰) */
+  --canvas:  #FFFFFF;
+  --tint-a:  rgba(56, 132, 224, 0.11);
+  --tint-b:  rgba(86, 160, 236, 0.08);
+  --tint-c:  rgba(64, 176, 232, 0.07);
+  --weave:   rgba(58, 120, 190, 0.028);
+  --grain:   0.05;
 
   --blue:         #4A7FCC;
   --blue-bg:      #EBF1FA;
@@ -74,9 +78,12 @@
   --fog-800: #D0D7E7;
   --fog-900: #E8EBF4;
 
-  --sky-100: #141C2E;
-  --sky-200: #1A2338;
-  --sky-300: #202B44;
+  --canvas:  #0C1320;
+  --tint-a:  rgba(56, 132, 224, 0.20);
+  --tint-b:  rgba(86, 160, 236, 0.13);
+  --tint-c:  rgba(64, 176, 232, 0.10);
+  --weave:   rgba(150, 190, 240, 0.030);
+  --grain:   0.06;
 
   --blue-bg:      #1E2C4C;
   --lavender-bg:  #252040;
@@ -113,9 +120,12 @@
     --fog-800: #D0D7E7;
     --fog-900: #E8EBF4;
 
-    --sky-100: #141C2E;
-    --sky-200: #1A2338;
-    --sky-300: #202B44;
+    --canvas:  #0C1320;
+    --tint-a:  rgba(56, 132, 224, 0.20);
+    --tint-b:  rgba(86, 160, 236, 0.13);
+    --tint-c:  rgba(64, 176, 232, 0.10);
+    --weave:   rgba(150, 190, 240, 0.030);
+    --grain:   0.06;
 
     --blue-bg:      #1E2C4C;
     --lavender-bg:  #252040;
@@ -140,128 +150,54 @@
   }
 }
 
-/* ── 天空层:真正的淡蓝,顶部偏天蓝,向下渐淡到白 ──────────── */
+/* ── 背景:白底 + 三团淡天蓝晕染 + 斜织纹与微噪点 ──────────────
+   粗看是一整片和谐的白;细看才浮出冷调晕染、1px 斜纹与颗粒。
+   单个元素三层:底色 / 晕染(极慢漂移) / 纹理(顶部显影)。      */
 
-.sky-layer {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    var(--sky-300) 0%,
-    var(--sky-200) 45%,
-    var(--sky-100) 78%,
-    var(--fog-100) 100%
-  );
-  transition: background var(--dur-fog) var(--ease-fog);
-}
-
-/* ── 分层流雾:白色半透明雾斑,浮在天空之上漂移 ────────────────
-   不是纯色,也不是单纯渐变:
-   · 一层天空底色(淡蓝渐变)
-   · 三层缓慢漂移的白雾(radial-gradient,不同周期/方向)
-   · 一层极淡噪点(SVG fractalNoise),破掉"塑料感"           */
-
-.fog-layer {
+.backdrop {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
+  /* 1px 斜织纹压在白底上:静态、不参与漂移,避免缩放糊掉细线 */
+  background:
+    repeating-linear-gradient(58deg, var(--weave) 0 1px, transparent 1px 9px),
+    var(--canvas);
   transition: background var(--dur-fog) var(--ease-fog);
   contain: layout style paint;
 }
 
-/* 雾斑:用 transform 平移 + 缩放,形成"雾在流动"的错觉
-   不用 filter:blur(70px)(逐帧重算高斯模糊太重),改用
-   两段式软渐变模拟同样的柔和边缘,transform 动画走合成层。 */
-.fog-blob {
+.backdrop::before {
+  content: '';
   position: absolute;
+  inset: -25%;
+  background:
+    radial-gradient(42% 34% at 16% 6%,  var(--tint-a), transparent 70%),
+    radial-gradient(38% 30% at 88% 20%, var(--tint-b), transparent 68%),
+    radial-gradient(56% 42% at 60% 98%, var(--tint-c), transparent 72%);
+  animation: backdrop-drift 60s var(--ease-breathe) infinite alternate;
   will-change: transform;
 }
 
-.fog-blob-1 {
-  width: 64vmax; height: 48vmax;
-  left: -16vmax; top: -18vmax;
-  border-radius: 62% 38% 55% 45% / 48% 52% 48% 52%;
-  background: radial-gradient(circle,
-    rgba(255, 255, 255, 0.18) 0%,
-    rgba(255, 255, 255, 0.08) 52%,
-    rgba(255, 255, 255, 0) 74%);
-  animation: fog-drift-1 36s ease-in-out infinite;
-}
-
-.fog-blob-2 {
-  width: 56vmax; height: 42vmax;
-  right: -14vmax; top: 4vmax;
-  border-radius: 45% 55% 60% 40% / 55% 45% 55% 45%;
-  background: radial-gradient(circle,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.06) 52%,
-    rgba(255, 255, 255, 0) 74%);
-  animation: fog-drift-2 44s ease-in-out infinite;
-}
-
-/* 底部雾堤:让地平线附近有一层持续的、更厚的雾 */
-.fog-bank {
+.backdrop::after {
+  content: '';
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -8vmax;
-  height: 34vmax;
-  background: radial-gradient(
-    ellipse 100% 60% at 50% 100%,
-    rgba(255, 255, 255, 0.12) 0%,
-    rgba(255, 255, 255, 0.04) 45%,
-    rgba(255, 255, 255, 0) 70%
-  );
-  animation: fog-bank-breathe 30s ease-in-out infinite;
+  inset: 0;
+  /* 灰度噪点:feTurbulence 后接 saturate(0),避免彩色颗粒 */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: var(--grain);
+  -webkit-mask-image: radial-gradient(130% 95% at 50% -10%, #000 25%, transparent 80%);
+  mask-image: radial-gradient(130% 95% at 50% -10%, #000 25%, transparent 80%);
 }
 
-@keyframes fog-bank-breathe {
-  0%, 100% { opacity: 0.9; }
-  50%      { opacity: 0.7; }
+@keyframes backdrop-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(2.5%, -2%, 0) scale(1.06); }
 }
 
-@keyframes fog-drift-1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33%      { transform: translate(6vmax, 4vmax) scale(1.12); }
-  66%      { transform: translate(-4vmax, 7vmax) scale(0.94); }
-}
-
-@keyframes fog-drift-2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50%      { transform: translate(-7vmax, 5vmax) scale(1.15); }
-}
-
-[data-theme="dark"] .fog-blob-1,
-[data-theme="dark"] .fog-blob-2 {
-  background: radial-gradient(circle,
-    rgba(180, 196, 224, 0.12) 0%,
-    rgba(180, 196, 224, 0.04) 52%,
-    rgba(180, 196, 224, 0) 74%);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]):not([data-theme="dark"]) .fog-blob-1,
-  :root:not([data-theme="light"]):not([data-theme="dark"]) .fog-blob-2 {
-    background: radial-gradient(circle,
-      rgba(180, 196, 224, 0.12) 0%,
-      rgba(180, 196, 224, 0.04) 52%,
-      rgba(180, 196, 224, 0) 74%);
-  }
-}
-
-/* ── 呼吸:界面待机的微透明波动 ─────────────────────────── */
-
-@keyframes fog-breathe {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.98; }
-}
-
-.fog-breathe {
-  animation: fog-breathe 5s var(--ease-breathe) infinite;
+@media (prefers-reduced-motion: reduce) {
+  .backdrop::before { animation: none; }
 }
 
 /* ── 解雾 / 凝聚 ─────────────────────────────────────────── */

@@ -18,9 +18,12 @@
   --fog-800: #1F2A3D;
   --fog-900: #0F1726;
 
-  --sky-100: #E7F0F8;
-  --sky-200: #DCE8F4;
-  --sky-300: #CCDDEE;
+  --canvas:  #FFFFFF;
+  --tint-a:  rgba(56, 132, 224, 0.11);
+  --tint-b:  rgba(86, 160, 236, 0.08);
+  --tint-c:  rgba(64, 176, 232, 0.07);
+  --weave:   rgba(58, 120, 190, 0.028);
+  --grain:   0.05;
 
   --blue:         #4A7FCC;
   --blue-bg:      #EBF1FA;
@@ -82,9 +85,12 @@
   --fog-800: #D0D7E7;
   --fog-900: #E8EBF4;
 
-  --sky-100: #141C2E;
-  --sky-200: #1A2338;
-  --sky-300: #202B44;
+  --canvas:  #0C1320;
+  --tint-a:  rgba(56, 132, 224, 0.20);
+  --tint-b:  rgba(86, 160, 236, 0.13);
+  --tint-c:  rgba(64, 176, 232, 0.10);
+  --weave:   rgba(150, 190, 240, 0.030);
+  --grain:   0.06;
 
   --blue-bg:      #1E2C4C;
   --lavender-bg:  #252040;
@@ -121,9 +127,12 @@
     --fog-800: #D0D7E7;
     --fog-900: #E8EBF4;
 
-    --sky-100: #141C2E;
-    --sky-200: #1A2338;
-    --sky-300: #202B44;
+    --canvas:  #0C1320;
+    --tint-a:  rgba(56, 132, 224, 0.20);
+    --tint-b:  rgba(86, 160, 236, 0.13);
+    --tint-c:  rgba(64, 176, 232, 0.10);
+    --weave:   rgba(150, 190, 240, 0.030);
+    --grain:   0.06;
 
     --blue-bg:      #1E2C4C;
     --lavender-bg:  #252040;

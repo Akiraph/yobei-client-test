@@ -746,6 +746,10 @@
   width: 100%;
 }
 
+@media (max-width: 859px) {
+  .settings-layout { grid-template-columns: minmax(0, 1fr); }
+}
+
 .settings-nav {
   width: 220px;
   flex-shrink: 0;
@@ -824,6 +828,44 @@
   backdrop-filter: blur(8px);
 }
 
+.settings-nav-item.danger { color: var(--danger); }
+
+/* 安卓风格的设置根列表:图标 + 标题/副文本 + 右侧箭头 */
+.settings-entries { display: flex; flex-direction: column; }
+
+.settings-entry {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 4px;
+  border-radius: var(--r-md);
+  text-align: left;
+  color: var(--fog-800);
+  transition: background var(--dur-fast) var(--ease-fog);
+}
+
+.settings-entry:active { background: var(--fog-150); }
+.settings-entry.danger .settings-entry-icon { color: var(--danger); }
+
+.settings-entry-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-md);
+  background: var(--fog-150);
+  color: var(--fog-700);
+}
+
+.settings-entry-text { flex: 1; min-width: 0; }
+.settings-entry-name { display: block; font-size: 16px; font-weight: 500; }
+.settings-entry-desc { display: block; font-size: 13px; color: var(--fog-400); }
+.settings-entry-chevron { flex-shrink: 0; color: var(--fog-300); }
+
 .settings-panel {
   animation: settings-panel-in 220ms var(--ease-fog) both;
 }
@@ -888,6 +930,23 @@
   background: rgba(255, 255, 255, 0.5);
   color: var(--fog-800);
   backdrop-filter: blur(8px);
+}
+
+.seg-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.setting-warning {
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  background: var(--danger-bg);
+  color: var(--danger);
+  margin-bottom: 4px;
 }
 
 
@@ -1121,7 +1180,7 @@
   bottom: 0;
   z-index: 31;
   width: 260px;
-  padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  padding-top: calc(max(env(safe-area-inset-top, 0px), 12px) + 12px);
   background: transparent;
   isolation: isolate;
   box-shadow: var(--shadow-lift);
@@ -1213,7 +1272,9 @@
 }
 
 @media (max-width: 859px) {
-  .app-body { padding-top: env(safe-area-inset-top, 0px); }
+  /* Status-bar clearance is applied once here; inner panes keep small paddings.
+     max() guards devices whose WebView reports no inset for the status bar. */
+  .app-body { padding-top: max(env(safe-area-inset-top, 0px), 12px); }
 
   .vault-root {
     flex-direction: column;
@@ -1249,43 +1310,13 @@
     touch-action: pan-y;
   }
 
-  .settings-layout {
-    display: flex;
-    flex-direction: column;
-  }
-  .settings-nav {
-    width: 100%;
-    padding: max(16px, env(safe-area-inset-top, 0px)) 16px 8px;
-    gap: 10px;
-    overflow: hidden;
-    border-right: 0;
-  }
-  .settings-head { padding: 0; }
   .settings-head h1 { font-size: 25px; }
-  .settings-nav-list {
-    flex-direction: row;
-    gap: 6px;
-    overflow-x: auto;
-    padding: 2px 0 6px;
-    scrollbar-width: none;
-    scroll-snap-type: x proximity;
-  }
-  .settings-nav-list::-webkit-scrollbar { display: none; }
-  .settings-nav-item {
-    flex: 0 0 auto;
-    min-height: 36px;
-    padding: 7px 13px;
-    border-radius: 99px;
-    font-size: 13px;
-    scroll-snap-align: start;
-    transition: transform 180ms var(--ease-spring), background 180ms var(--ease-fog), color 180ms var(--ease-fog);
-  }
-  .settings-nav-item.active { transform: scale(1.04); }
-  .settings-body { padding: 0 16px calc(32px + env(safe-area-inset-bottom, 0px)); }
+  .settings-head-mobile { padding: 2px 16px 6px; }
+  /* The mobile header already names the subpage, so drop the in-panel caption. */
+  .settings-panel .settings-title { display: none; }
+  .settings-panel .settings-section { margin-bottom: 0; }
+  .settings-body { padding: 4px 16px calc(32px + env(safe-area-inset-bottom, 0px)); }
   .settings-scroll { display: block; }
-  .settings-mobile-section { scroll-margin-top: 8px; }
-  .settings-mobile-section + .settings-mobile-section { margin-top: 34px; }
-  .settings-mobile-section .settings-section { margin-bottom: 0; }
 
   .setting-row {
     display: grid;
@@ -1310,16 +1341,15 @@
   .device-row { align-items: flex-start; padding: 12px 0; }
   .device-row .btn { flex-shrink: 0; }
 
-  .toolbar { padding-left: 16px; padding-right: 16px; }
+  .toolbar { padding: 6px 16px 0; }
   .item-list { padding-left: 12px; padding-right: 12px; }
+  .detail-scroll { padding: 8px 20px calc(24px + env(safe-area-inset-bottom, 0px)); }
+  .detail-header { margin-bottom: 20px; }
 
   .vault-item { min-height: 64px; padding: 14px; }
   .btn { min-height: var(--touch-min); }
 
   .item-time { opacity: 1; }
-
-  .detail-scroll { padding-left: 20px; padding-right: 20px; }
-
 }
 
 @media (prefers-reduced-motion: reduce) {

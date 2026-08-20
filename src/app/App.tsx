@@ -33,12 +33,7 @@ export default function App() {
 
   return (
     <>
-      <div class="sky-layer" aria-hidden="true" />
-      <div class="fog-layer" aria-hidden="true">
-        <div class="fog-bank" />
-        <div class="fog-blob fog-blob-1" />
-        <div class="fog-blob fog-blob-2" />
-      </div>
+      <div class="backdrop" aria-hidden="true" />
 
       <Titlebar />
 
