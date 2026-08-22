@@ -176,6 +176,7 @@ function VaultRow(props: { item: VaultItem; selected: boolean; onClick: () => vo
   return (
     <div
       class={`vault-item${props.selected ? ' selected' : ''}`}
+      data-item-id={props.item.id}
       role="option"
       aria-selected={props.selected}
       tabindex="0"

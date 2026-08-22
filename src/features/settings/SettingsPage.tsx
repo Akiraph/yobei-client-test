@@ -4,19 +4,8 @@ import { backend } from '../../core/backend';
 import { errorKey } from '../../core/errors';
 import { t } from '../../core/locale';
 import { actions, state } from '../../core/state';
-import type { SettingsSection } from '../../core/types';
 import Dialog from '../../ui/dialog';
-import {
-  IconBack,
-  IconChevronRight,
-  IconDatabase,
-  IconInfo,
-  IconPalette,
-  IconPuzzle,
-  IconRefresh,
-  IconShield,
-  IconWarning,
-} from '../../ui/icons';
+import { IconBack, IconChevronRight, IconWarning } from '../../ui/icons';
 import { useMediaQuery } from '../vault/useMediaQuery';
 import { notify } from '../../ui/notifications';
 import PinInput from '../../ui/pin-input';
@@ -30,14 +19,6 @@ import {
   SyncSection,
 } from './SettingsSections';
 
-interface SectionMeta {
-  id: SettingsSection;
-  label: string;
-  desc: string;
-  icon: JSX.Element;
-  danger?: boolean;
-}
-
 export default function SettingsPage(props: { onClose: () => void }) {
   const desktop = __YOBEI_DESKTOP__;
   const mobile = useMediaQuery('(max-width: 859px)');
@@ -45,38 +26,34 @@ export default function SettingsPage(props: { onClose: () => void }) {
   const [restoreContent, setRestoreContent] = createSignal<string | null>(null);
   const [restorePin, setRestorePin] = createSignal('');
   const [restoreBusy, setRestoreBusy] = createSignal(false);
-
-  // Desktop shows a section next to the nav; mobile starts at the root list.
-  const section = createMemo(() => state.settingsSection ?? (mobile() ? null : 'general'));
+  const anchors = new Map<string, HTMLElement>();
 
   onMount(() => {
     void backend.version().then(setVersion).catch(() => {});
   });
 
-  const sections = createMemo<SectionMeta[]>(() => [
-    { id: 'general', label: t('settings.general'), desc: t('settings.generalDesc'), icon: <IconPalette size={19} /> },
-    { id: 'security', label: t('settings.security'), desc: t('settings.securityDesc'), icon: <IconShield size={19} /> },
-    { id: 'sync', label: t('settings.sync'), desc: t('settings.syncEntryDesc'), icon: <IconRefresh size={19} /> },
-    ...(desktop
-      ? [{ id: 'extension' as const, label: t('settings.extension'), desc: t('settings.extensionEntryDesc'), icon: <IconPuzzle size={19} /> }]
-      : []),
-    { id: 'data', label: t('settings.data'), desc: t('settings.dataDesc'), icon: <IconDatabase size={19} /> },
-    { id: 'advanced', label: t('settings.advanced'), desc: t('settings.advancedDesc'), icon: <IconWarning size={19} />, danger: true },
-    { id: 'about', label: t('settings.about'), desc: t('settings.aboutEntryDesc'), icon: <IconInfo size={19} /> },
+  // Everything common is laid out on one page; only Advanced is a subpage
+  // because its actions are rare and irreversible.
+  const flat = createMemo<Array<{ id: string; label: string; body: JSX.Element }>>(() => [
+    { id: 'general', label: t('settings.general'), body: <GeneralSection /> },
+    { id: 'security', label: t('settings.security'), body: <SecuritySection /> },
+    { id: 'sync', label: t('settings.sync'), body: <SyncSection /> },
+    ...(desktop ? [{ id: 'extension', label: t('settings.extension'), body: <ExtensionSection /> }] : []),
+    { id: 'data', label: t('settings.data'), body: <DataSection /> },
+    { id: 'about', label: t('settings.about'), body: <AboutSection version={version()} /> },
   ]);
 
-  // Mobile subpages take a history entry so the system back gesture unwinds them.
-  function openSection(id: SettingsSection) {
-    actions.openSettingsSection(id);
-    if (mobile() && history.state?.yobei !== 'settings-section') {
-      history.pushState({ ...(history.state ?? {}), yobei: 'settings-section' }, '');
+  function openAdvanced() {
+    actions.openSettingsSubpage('advanced');
+    if (mobile() && history.state?.yobei !== 'settings-advanced') {
+      history.pushState({ ...(history.state ?? {}), yobei: 'settings-advanced' }, '');
     }
   }
 
   function back() {
-    if (!mobile() || !state.settingsSection) return props.onClose();
-    if (history.state?.yobei === 'settings-section') history.back();
-    else actions.openSettingsSection(null);
+    if (!state.settingsSubpage) return props.onClose();
+    if (mobile() && history.state?.yobei === 'settings-advanced') history.back();
+    else actions.openSettingsSubpage(null);
   }
 
   async function chooseRestore() {
@@ -105,20 +82,6 @@ export default function SettingsPage(props: { onClose: () => void }) {
     }
   }
 
-  function sectionContent(id: SettingsSection) {
-    switch (id) {
-      case 'general': return <GeneralSection />;
-      case 'security': return <SecuritySection />;
-      case 'sync': return <SyncSection />;
-      case 'extension': return desktop ? <ExtensionSection /> : null;
-      case 'data': return <DataSection />;
-      case 'advanced': return <AdvancedSection onRestore={chooseRestore} />;
-      case 'about': return <AboutSection version={version()} />;
-    }
-  }
-
-  const title = () => sections().find((item) => item.id === section())?.label ?? t('settings.title');
-
   return (
     <div class="settings-root fog-reveal">
       <div class="settings-layout">
@@ -131,11 +94,11 @@ export default function SettingsPage(props: { onClose: () => void }) {
               <h1 class="font-serif">{t('settings.title')}</h1>
             </header>
             <nav class="settings-nav-list" aria-label={t('settings.title')}>
-              <For each={sections()}>
+              <For each={flat()}>
                 {(item) => (
                   <button
-                    class={`settings-nav-item${section() === item.id ? ' active' : ''}${item.danger ? ' danger' : ''}`}
-                    onClick={() => actions.openSettingsSection(item.id)}
+                    class="settings-nav-item"
+                    onClick={() => anchors.get(item.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
                   >
                     {item.label}
                   </button>
@@ -148,17 +111,50 @@ export default function SettingsPage(props: { onClose: () => void }) {
         <main class="settings-content">
           <Show when={mobile()}>
             <header class="settings-head settings-head-mobile">
-              <button class="icon-btn settings-back" onClick={back} aria-label={t(section() ? 'common.back' : 'settings.backToVault')}>
+              <button
+                class="icon-btn settings-back"
+                onClick={back}
+                aria-label={t(state.settingsSubpage ? 'common.back' : 'settings.backToVault')}
+              >
                 <IconBack size={18} />
               </button>
-              <h1 class="font-serif">{title()}</h1>
+              <h1 class="font-serif">{t(state.settingsSubpage ? 'settings.advanced' : 'settings.title')}</h1>
             </header>
           </Show>
 
           <div class="settings-scroll">
             <div class="settings-body">
-              <Show when={section()} keyed fallback={<SectionList sections={sections()} onOpen={openSection} />}>
-                {(id) => <div class="settings-panel">{sectionContent(id)}</div>}
+              <Show
+                when={state.settingsSubpage === 'advanced'}
+                fallback={
+                  <>
+                    <For each={flat()}>
+                      {(item) => (
+                        <div ref={(element) => anchors.set(item.id, element)} class="settings-anchor">
+                          {item.body}
+                        </div>
+                      )}
+                    </For>
+                    <button class="settings-entry danger" onClick={openAdvanced}>
+                      <span class="settings-entry-icon"><IconWarning size={19} /></span>
+                      <span class="settings-entry-text">
+                        <span class="settings-entry-name">{t('settings.advanced')}</span>
+                        <span class="settings-entry-desc">{t('settings.advancedDesc')}</span>
+                      </span>
+                      <IconChevronRight size={17} class="settings-entry-chevron" />
+                    </button>
+                  </>
+                }
+              >
+                <div class="settings-panel">
+                  <Show when={!mobile()}>
+                    <button class="btn btn-ghost settings-subpage-back" onClick={back}>
+                      <IconBack size={14} />
+                      {t('common.back')}
+                    </button>
+                  </Show>
+                  <AdvancedSection onRestore={chooseRestore} />
+                </div>
               </Show>
             </div>
           </div>
@@ -188,24 +184,5 @@ export default function SettingsPage(props: { onClose: () => void }) {
         </div>
       </Dialog>
     </div>
-  );
-}
-
-function SectionList(props: { sections: SectionMeta[]; onOpen: (id: SettingsSection) => void }) {
-  return (
-    <nav class="settings-entries" aria-label={t('settings.title')}>
-      <For each={props.sections}>
-        {(item) => (
-          <button class={`settings-entry${item.danger ? ' danger' : ''}`} onClick={() => props.onOpen(item.id)}>
-            <span class="settings-entry-icon">{item.icon}</span>
-            <span class="settings-entry-text">
-              <span class="settings-entry-name">{item.label}</span>
-              <span class="settings-entry-desc">{item.desc}</span>
-            </span>
-            <IconChevronRight size={17} class="settings-entry-chevron" />
-          </button>
-        )}
-      </For>
-    </nav>
   );
 }

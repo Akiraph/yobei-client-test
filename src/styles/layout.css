@@ -830,9 +830,7 @@
 
 .settings-nav-item.danger { color: var(--danger); }
 
-/* 安卓风格的设置根列表:图标 + 标题/副文本 + 右侧箭头 */
-.settings-entries { display: flex; flex-direction: column; }
-
+/* 次级页入口(目前只有"高级"):图标 + 标题/副文本 + 右侧箭头 */
 .settings-entry {
   display: flex;
   align-items: center;
@@ -866,12 +864,15 @@
 .settings-entry-desc { display: block; font-size: 13px; color: var(--fog-400); }
 .settings-entry-chevron { flex-shrink: 0; color: var(--fog-300); }
 
+.settings-anchor { scroll-margin-top: 8px; }
+.settings-subpage-back { margin-bottom: 12px; }
+
 .settings-panel {
-  animation: settings-panel-in 220ms var(--ease-fog) both;
+  animation: settings-panel-in 160ms var(--ease-fog) both;
 }
 
 @keyframes settings-panel-in {
-  from { opacity: 0; transform: translateX(12px); }
+  from { opacity: 0; transform: translateX(10px); }
   to { opacity: 1; transform: translateX(0); }
 }
 
@@ -1283,18 +1284,16 @@
 
   .vault-list { width: 100%; }
 
-  .vault-detail {
-    width: 100%;
-    flex: 1 1 auto;
-    min-height: 0;
-    background: transparent;
-    transform-origin: center top;
-    animation: mobile-detail-expand 280ms var(--ease-fog) both;
-  }
+  /* Keep the list mounted and laid out under the detail pane: its scroll offset
+     and row rects survive, so returning lands on the same rows. */
+  .vault-list.pane-hidden { visibility: hidden; }
 
-  @keyframes mobile-detail-expand {
-    from { opacity: 0; transform: scale(.96) translateY(18px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
+  .vault-detail {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    width: 100%;
+    background: transparent;
   }
 
   .vault-detail .detail-pane,
@@ -1317,6 +1316,7 @@
   .settings-panel .settings-section { margin-bottom: 0; }
   .settings-body { padding: 4px 16px calc(32px + env(safe-area-inset-bottom, 0px)); }
   .settings-scroll { display: block; }
+  .settings-section { margin-bottom: 30px; }
 
   .setting-row {
     display: grid;

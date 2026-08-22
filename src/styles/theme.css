@@ -10,13 +10,16 @@
   --fog-800: #1F2A3D;
   --fog-900: #0F1726;
 
-  /* 画布:白为基调,叠三层干净的天蓝(不发灰) */
-  --canvas:  #FFFFFF;
-  --tint-a:  rgba(56, 132, 224, 0.11);
-  --tint-b:  rgba(86, 160, 236, 0.08);
-  --tint-c:  rgba(64, 176, 232, 0.07);
-  --weave:   rgba(58, 120, 190, 0.028);
-  --grain:   0.05;
+  /* 画布:白为基调。天蓝拆成近/中/远三个色相层,
+     再掺一丝青、一丝雪青、一缕暖光,避免单色发闷;总量克制。 */
+  --canvas:   #FFFFFF;
+  --tint-sky:   rgba(52, 130, 226, 0.13);
+  --tint-azure: rgba(96, 176, 242, 0.095);
+  --tint-cyan:  rgba(52, 186, 232, 0.07);
+  --tint-iris:  rgba(128, 142, 234, 0.05);
+  --tint-warm:  rgba(255, 208, 160, 0.04);
+  --edge:       rgba(48, 110, 180, 0.05);
+  --grain:      0.032;
 
   --blue:         #4A7FCC;
   --blue-bg:      #EBF1FA;
@@ -78,12 +81,14 @@
   --fog-800: #D0D7E7;
   --fog-900: #E8EBF4;
 
-  --canvas:  #0C1320;
-  --tint-a:  rgba(56, 132, 224, 0.20);
-  --tint-b:  rgba(86, 160, 236, 0.13);
-  --tint-c:  rgba(64, 176, 232, 0.10);
-  --weave:   rgba(150, 190, 240, 0.030);
-  --grain:   0.06;
+  --canvas:     #0C1320;
+  --tint-sky:   rgba(56, 132, 224, 0.22);
+  --tint-azure: rgba(86, 168, 236, 0.15);
+  --tint-cyan:  rgba(52, 186, 232, 0.11);
+  --tint-iris:  rgba(128, 142, 234, 0.10);
+  --tint-warm:  rgba(255, 208, 160, 0.05);
+  --edge:       rgba(0, 0, 0, 0.18);
+  --grain:      0.05;
 
   --blue-bg:      #1E2C4C;
   --lavender-bg:  #252040;
@@ -120,12 +125,14 @@
     --fog-800: #D0D7E7;
     --fog-900: #E8EBF4;
 
-    --canvas:  #0C1320;
-    --tint-a:  rgba(56, 132, 224, 0.20);
-    --tint-b:  rgba(86, 160, 236, 0.13);
-    --tint-c:  rgba(64, 176, 232, 0.10);
-    --weave:   rgba(150, 190, 240, 0.030);
-    --grain:   0.06;
+    --canvas:     #0C1320;
+    --tint-sky:   rgba(56, 132, 224, 0.22);
+    --tint-azure: rgba(86, 168, 236, 0.15);
+    --tint-cyan:  rgba(52, 186, 232, 0.11);
+    --tint-iris:  rgba(128, 142, 234, 0.10);
+    --tint-warm:  rgba(255, 208, 160, 0.05);
+    --edge:       rgba(0, 0, 0, 0.18);
+    --grain:      0.05;
 
     --blue-bg:      #1E2C4C;
     --lavender-bg:  #252040;
@@ -150,9 +157,10 @@
   }
 }
 
-/* ── 背景:白底 + 三团淡天蓝晕染 + 斜织纹与微噪点 ──────────────
-   粗看是一整片和谐的白;细看才浮出冷调晕染、1px 斜纹与颗粒。
-   单个元素三层:底色 / 晕染(极慢漂移) / 纹理(顶部显影)。      */
+/* ── 背景:白底 + 五层极淡色晕 + 跟随色晕的颗粒 ────────────────
+   粗看是一整片和谐的白。细看才浮出:不同色相的天蓝在缓慢相对
+   位移,四角有一圈冷调收边,以及 3% 的颗粒——颗粒的真正作用是
+   打散 8bit 屏上大面积浅渐变必然出现的色带,精致感来自这里。   */
 
 .backdrop {
   position: fixed;
@@ -160,44 +168,70 @@
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
-  /* 1px 斜织纹压在白底上:静态、不参与漂移,避免缩放糊掉细线 */
-  background:
-    repeating-linear-gradient(58deg, var(--weave) 0 1px, transparent 1px 9px),
-    var(--canvas);
+  background: var(--canvas);
   transition: background var(--dur-fog) var(--ease-fog);
   contain: layout style paint;
 }
 
-.backdrop::before {
-  content: '';
-  position: absolute;
-  inset: -25%;
-  background:
-    radial-gradient(42% 34% at 16% 6%,  var(--tint-a), transparent 70%),
-    radial-gradient(38% 30% at 88% 20%, var(--tint-b), transparent 68%),
-    radial-gradient(56% 42% at 60% 98%, var(--tint-c), transparent 72%);
-  animation: backdrop-drift 60s var(--ease-breathe) infinite alternate;
-  will-change: transform;
-}
-
+/* 四角冷调收边:白不至于像一张空白纸,内容有极轻的浮起感 */
 .backdrop::after {
   content: '';
   position: absolute;
   inset: 0;
-  /* 灰度噪点:feTurbulence 后接 saturate(0),避免彩色颗粒 */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  opacity: var(--grain);
-  -webkit-mask-image: radial-gradient(130% 95% at 50% -10%, #000 25%, transparent 80%);
-  mask-image: radial-gradient(130% 95% at 50% -10%, #000 25%, transparent 80%);
+  background: radial-gradient(125% 105% at 50% 46%, transparent 52%, var(--edge) 100%);
 }
 
-@keyframes backdrop-drift {
+/* 两组色晕以不同周期反向微移:交界处一直在变,静态截图看不出来 */
+.backdrop-tint {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(40% 32% at 14% 4%,  var(--tint-sky),  transparent 70%),
+    radial-gradient(46% 36% at 66% 96%, var(--tint-cyan), transparent 72%),
+    radial-gradient(40% 34% at 50% 46%, var(--tint-warm), transparent 68%);
+  animation: backdrop-drift-a 90s var(--ease-breathe) infinite alternate;
+  will-change: transform;
+}
+
+.backdrop-tint::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(36% 30% at 88% 16%, var(--tint-azure), transparent 68%),
+    radial-gradient(34% 30% at 8% 88%,  var(--tint-iris),  transparent 70%);
+  animation: backdrop-drift-b 120s var(--ease-breathe) infinite alternate;
+  will-change: transform;
+}
+
+/* 颗粒只在有色的区域显影,压在纯白上会显脏 */
+.backdrop-grain {
+  position: absolute;
+  inset: 0;
+  opacity: var(--grain);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --grain-mask:
+    radial-gradient(46% 38% at 14% 4%,  #000, transparent 72%),
+    radial-gradient(52% 42% at 66% 96%, #000, transparent 74%),
+    radial-gradient(42% 36% at 88% 16%, #000, transparent 70%),
+    radial-gradient(40% 36% at 8% 88%,  #000, transparent 72%);
+  -webkit-mask-image: var(--grain-mask);
+  mask-image: var(--grain-mask);
+}
+
+@keyframes backdrop-drift-a {
   from { transform: translate3d(0, 0, 0) scale(1); }
-  to   { transform: translate3d(2.5%, -2%, 0) scale(1.06); }
+  to   { transform: translate3d(2%, -1.5%, 0) scale(1.05); }
+}
+
+@keyframes backdrop-drift-b {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(-2.5%, 2%, 0) scale(1.06); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .backdrop::before { animation: none; }
+  .backdrop-tint,
+  .backdrop-tint::before { animation: none; }
 }
 
 /* ── 解雾 / 凝聚 ─────────────────────────────────────────── */

@@ -33,7 +33,10 @@ export default function App() {
 
   return (
     <>
-      <div class="backdrop" aria-hidden="true" />
+      <div class="backdrop" aria-hidden="true">
+        <div class="backdrop-tint" />
+        <div class="backdrop-grain" />
+      </div>
 
       <Titlebar />
 

@@ -13,6 +13,7 @@ import SiteIcon from '../../ui/site-icon';
 import Editor from './Editor';
 
 interface DetailPaneProps {
+  ref?: (element: HTMLElement) => void;
   mobile: boolean;
   editingId: string | null | undefined;
   onEdit: (id: string) => void;
@@ -21,7 +22,7 @@ interface DetailPaneProps {
 
 export default function DetailPane(props: DetailPaneProps) {
   return (
-    <aside class="vault-detail">
+    <aside class="vault-detail" ref={props.ref}>
       <Show when={props.editingId !== undefined} fallback={<ItemDetail {...props} />}>
         <Editor
           id={props.editingId ?? undefined}

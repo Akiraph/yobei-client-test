@@ -18,12 +18,14 @@
   --fog-800: #1F2A3D;
   --fog-900: #0F1726;
 
-  --canvas:  #FFFFFF;
-  --tint-a:  rgba(56, 132, 224, 0.11);
-  --tint-b:  rgba(86, 160, 236, 0.08);
-  --tint-c:  rgba(64, 176, 232, 0.07);
-  --weave:   rgba(58, 120, 190, 0.028);
-  --grain:   0.05;
+  --canvas:     #FFFFFF;
+  --tint-sky:   rgba(52, 130, 226, 0.13);
+  --tint-azure: rgba(96, 176, 242, 0.095);
+  --tint-cyan:  rgba(52, 186, 232, 0.07);
+  --tint-iris:  rgba(128, 142, 234, 0.05);
+  --tint-warm:  rgba(255, 208, 160, 0.04);
+  --edge:       rgba(48, 110, 180, 0.05);
+  --grain:      0.032;
 
   --blue:         #4A7FCC;
   --blue-bg:      #EBF1FA;
@@ -85,12 +87,14 @@
   --fog-800: #D0D7E7;
   --fog-900: #E8EBF4;
 
-  --canvas:  #0C1320;
-  --tint-a:  rgba(56, 132, 224, 0.20);
-  --tint-b:  rgba(86, 160, 236, 0.13);
-  --tint-c:  rgba(64, 176, 232, 0.10);
-  --weave:   rgba(150, 190, 240, 0.030);
-  --grain:   0.06;
+  --canvas:     #0C1320;
+  --tint-sky:   rgba(56, 132, 224, 0.22);
+  --tint-azure: rgba(86, 168, 236, 0.15);
+  --tint-cyan:  rgba(52, 186, 232, 0.11);
+  --tint-iris:  rgba(128, 142, 234, 0.10);
+  --tint-warm:  rgba(255, 208, 160, 0.05);
+  --edge:       rgba(0, 0, 0, 0.18);
+  --grain:      0.05;
 
   --blue-bg:      #1E2C4C;
   --lavender-bg:  #252040;
@@ -127,12 +131,14 @@
     --fog-800: #D0D7E7;
     --fog-900: #E8EBF4;
 
-    --canvas:  #0C1320;
-    --tint-a:  rgba(56, 132, 224, 0.20);
-    --tint-b:  rgba(86, 160, 236, 0.13);
-    --tint-c:  rgba(64, 176, 232, 0.10);
-    --weave:   rgba(150, 190, 240, 0.030);
-    --grain:   0.06;
+    --canvas:     #0C1320;
+    --tint-sky:   rgba(56, 132, 224, 0.22);
+    --tint-azure: rgba(86, 168, 236, 0.15);
+    --tint-cyan:  rgba(52, 186, 232, 0.11);
+    --tint-iris:  rgba(128, 142, 234, 0.10);
+    --tint-warm:  rgba(255, 208, 160, 0.05);
+    --edge:       rgba(0, 0, 0, 0.18);
+    --grain:      0.05;
 
     --blue-bg:      #1E2C4C;
     --lavender-bg:  #252040;
