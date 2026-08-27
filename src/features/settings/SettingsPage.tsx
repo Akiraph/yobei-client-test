@@ -19,29 +19,57 @@ import {
   SyncSection,
 } from './SettingsSections';
 
+// Settings entries. Desktop shows one at a time next to the nav; mobile puts
+// the common ones on a single scrollable page and keeps Advanced as a subpage,
+// because its actions are rare and irreversible.
+type NavId = 'general' | 'security' | 'sync' | 'extension' | 'data' | 'about' | 'advanced';
+
 export default function SettingsPage(props: { onClose: () => void }) {
   const desktop = __YOBEI_DESKTOP__;
   const mobile = useMediaQuery('(max-width: 859px)');
   const [version, setVersion] = createSignal('');
+  const [nav, setNav] = createSignal<NavId>('general');
   const [restoreContent, setRestoreContent] = createSignal<string | null>(null);
   const [restorePin, setRestorePin] = createSignal('');
   const [restoreBusy, setRestoreBusy] = createSignal(false);
-  const anchors = new Map<string, HTMLElement>();
+  // Desktop scroll container; switching sections has to start at the top again.
+  let scrollEl: HTMLDivElement | undefined;
 
   onMount(() => {
     void backend.version().then(setVersion).catch(() => {});
   });
 
-  // Everything common is laid out on one page; only Advanced is a subpage
-  // because its actions are rare and irreversible.
-  const flat = createMemo<Array<{ id: string; label: string; body: JSX.Element }>>(() => [
-    { id: 'general', label: t('settings.general'), body: <GeneralSection /> },
-    { id: 'security', label: t('settings.security'), body: <SecuritySection /> },
-    { id: 'sync', label: t('settings.sync'), body: <SyncSection /> },
-    ...(desktop ? [{ id: 'extension', label: t('settings.extension'), body: <ExtensionSection /> }] : []),
-    { id: 'data', label: t('settings.data'), body: <DataSection /> },
-    { id: 'about', label: t('settings.about'), body: <AboutSection version={version()} /> },
+  const commonIds = createMemo<NavId[]>(() => [
+    'general',
+    'security',
+    'sync',
+    ...(desktop ? (['extension'] as NavId[]) : []),
+    'data',
+    'about',
   ]);
+
+  const navItems = createMemo<Array<{ id: NavId; label: string; danger?: boolean }>>(() => [
+    ...commonIds().map((id) => ({ id, label: label(id) })),
+    { id: 'advanced', label: t('settings.advanced'), danger: true },
+  ]);
+
+  function label(id: NavId): string {
+    return t(`settings.${id}`);
+  }
+
+  // Called on demand, so a desktop section only mounts (and only hits the
+  // backend) once it is actually shown.
+  function body(id: NavId): JSX.Element {
+    switch (id) {
+      case 'general': return <GeneralSection />;
+      case 'security': return <SecuritySection />;
+      case 'sync': return <SyncSection />;
+      case 'extension': return <ExtensionSection />;
+      case 'data': return <DataSection />;
+      case 'about': return <AboutSection version={version()} />;
+      case 'advanced': return <AdvancedSection onRestore={chooseRestore} />;
+    }
+  }
 
   function openAdvanced() {
     actions.openSettingsSubpage('advanced');
@@ -94,11 +122,15 @@ export default function SettingsPage(props: { onClose: () => void }) {
               <h1 class="font-serif">{t('settings.title')}</h1>
             </header>
             <nav class="settings-nav-list" aria-label={t('settings.title')}>
-              <For each={flat()}>
+              <For each={navItems()}>
                 {(item) => (
                   <button
-                    class="settings-nav-item"
-                    onClick={() => anchors.get(item.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                    class={`settings-nav-item${nav() === item.id ? ' active' : ''}${item.danger ? ' danger' : ''}`}
+                    aria-current={nav() === item.id ? 'page' : undefined}
+                    onClick={() => {
+                      setNav(item.id);
+                      scrollEl?.scrollTo({ top: 0 });
+                    }}
                   >
                     {item.label}
                   </button>
@@ -122,39 +154,38 @@ export default function SettingsPage(props: { onClose: () => void }) {
             </header>
           </Show>
 
-          <div class="settings-scroll">
+          <div class="settings-scroll" ref={scrollEl}>
             <div class="settings-body">
+              {/* Desktop: one section at a time, driven by the nav. `keyed` so the
+                  panel remounts and replays its slide-in on every switch. */}
               <Show
-                when={state.settingsSubpage === 'advanced'}
+                when={mobile()}
                 fallback={
-                  <>
-                    <For each={flat()}>
-                      {(item) => (
-                        <div ref={(element) => anchors.set(item.id, element)} class="settings-anchor">
-                          {item.body}
-                        </div>
-                      )}
-                    </For>
-                    <button class="settings-entry danger" onClick={openAdvanced}>
-                      <span class="settings-entry-icon"><IconWarning size={19} /></span>
-                      <span class="settings-entry-text">
-                        <span class="settings-entry-name">{t('settings.advanced')}</span>
-                        <span class="settings-entry-desc">{t('settings.advancedDesc')}</span>
-                      </span>
-                      <IconChevronRight size={17} class="settings-entry-chevron" />
-                    </button>
-                  </>
+                  <Show when={nav()} keyed>
+                    {(id) => <div class="settings-panel">{body(id)}</div>}
+                  </Show>
                 }
               >
-                <div class="settings-panel">
-                  <Show when={!mobile()}>
-                    <button class="btn btn-ghost settings-subpage-back" onClick={back}>
-                      <IconBack size={14} />
-                      {t('common.back')}
-                    </button>
-                  </Show>
-                  <AdvancedSection onRestore={chooseRestore} />
-                </div>
+                <Show
+                  when={state.settingsSubpage === 'advanced'}
+                  fallback={
+                    <>
+                      <For each={commonIds()}>{(id) => body(id)}</For>
+                      <button class="settings-entry danger" onClick={openAdvanced}>
+                        <span class="settings-entry-icon"><IconWarning size={19} /></span>
+                        <span class="settings-entry-text">
+                          <span class="settings-entry-name">{t('settings.advanced')}</span>
+                          <span class="settings-entry-desc">{t('settings.advancedDesc')}</span>
+                        </span>
+                        <IconChevronRight size={17} class="settings-entry-chevron" />
+                      </button>
+                    </>
+                  }
+                >
+                  <div class="settings-panel">
+                    <AdvancedSection onRestore={chooseRestore} />
+                  </div>
+                </Show>
               </Show>
             </div>
           </div>

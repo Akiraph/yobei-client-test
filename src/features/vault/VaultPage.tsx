@@ -5,7 +5,7 @@ import SettingsPage from '../settings/SettingsPage';
 import DetailPane from './DetailPane';
 import ItemList from './ItemList';
 import Sidebar from './Sidebar';
-import { flight, rowRect } from './flight';
+import { flight, rowOrigin, type Flight } from './flight';
 import { addTotpFromUri } from './totp';
 import { useMediaQuery } from './useMediaQuery';
 
@@ -14,10 +14,14 @@ export default function VaultPage() {
   const [pane, setPane] = createSignal<'list' | 'detail'>('list');
   const [sidebarOpen, setSidebarOpen] = createSignal(false);
   const [editingId, setEditingId] = createSignal<string | null | undefined>(undefined);
-  // True while the pane shrinks back, so the list is already visible behind it.
-  const [collapsing, setCollapsing] = createSignal(false);
+  // True while the pane grows out of / shrinks back onto its row. The list must
+  // stay visible then, so the growing rectangle is seen covering it.
+  const [flying, setFlying] = createSignal(false);
   // Set once the pane exists; the flight animation transforms this element.
   let detailEl: HTMLElement | undefined;
+  // The running flight, if any. It must be cancelled before measuring the pane
+  // again, otherwise its fill would be read as the pane's resting layout.
+  let running: Flight | null = null;
   let startX = 0;
   let startY = 0;
 
@@ -52,24 +56,37 @@ export default function VaultPage() {
   });
 
   function openItem(id: string) {
-    const rect = rowRect(id);
+    running?.cancel();
+    running = null;
+    const origin = rowOrigin(id);
     actions.select(id);
     setEditingId(undefined);
     setPane('detail');
-    // A microtask runs after Solid has flushed the render, whether or not the
-    // event handler batched it, so the pane exists and can be measured.
-    if (rect) queueMicrotask(() => {
-      if (!detailEl) return;
-      const animation = flight(detailEl, rect);
-      // Drop the fill afterwards, so the pane holds no leftover transform.
-      void animation?.finished.then(() => animation.cancel(), () => {});
-    });
+    if (origin) {
+      setFlying(true);
+      // A microtask runs after Solid has flushed the render, whether or not the
+      // event handler batched it, so the pane exists and can be measured.
+      queueMicrotask(() => {
+        const run = detailEl ? flight(detailEl, origin) : null;
+        running = run;
+        if (!run) {
+          setFlying(false);
+          return;
+        }
+        void run.finished.then(() => {
+          if (running === run) running = null;
+          setFlying(false);
+        });
+      });
+    }
     if (mobile() && history.state?.yobei !== 'detail') {
       history.pushState({ ...(history.state ?? {}), yobei: 'detail' }, '');
     }
   }
 
   function startNewItem() {
+    running?.cancel();
+    running = null;
     actions.select(null);
     setEditingId(null);
     setPane('detail');
@@ -82,17 +99,22 @@ export default function VaultPage() {
   // still at the same scroll offset the user left it at. Desktop keeps the pane
   // on screen permanently, so there is nothing to fly back there.
   async function collapseDetail() {
-    const rect = mobile() ? rowRect(state.selectedId) : null;
-    const animation = rect && detailEl ? flight(detailEl, rect, true) : null;
-    if (animation) {
-      setCollapsing(true);
-      await animation.finished.catch(() => {});
+    running?.cancel();
+    running = null;
+    const origin = mobile() ? rowOrigin(state.selectedId) : null;
+    const run = origin && detailEl ? flight(detailEl, origin, true) : null;
+    if (run) {
+      running = run;
+      setFlying(true);
+      await run.finished;
     }
     setPane('list');
     setEditingId(undefined);
     actions.select(null);
-    setCollapsing(false);
-    animation?.cancel();
+    setFlying(false);
+    // The pane is gone now, so the collapsed fill can be dropped.
+    run?.cancel();
+    if (running === run) running = null;
   }
 
   function closeDetail() {
@@ -142,7 +164,7 @@ export default function VaultPage() {
         <VaultLayout
           mobile={mobile}
           pane={pane}
-          collapsing={collapsing}
+          flying={flying}
           sidebarOpen={sidebarOpen}
           editingId={editingId}
           onTouchStart={onTouchStart}
@@ -167,7 +189,7 @@ export default function VaultPage() {
 interface VaultLayoutProps {
   mobile: () => boolean;
   pane: () => 'list' | 'detail';
-  collapsing: () => boolean;
+  flying: () => boolean;
   sidebarOpen: () => boolean;
   editingId: () => string | null | undefined;
   onTouchStart: (event: TouchEvent) => void;
@@ -205,8 +227,8 @@ function VaultLayout(props: VaultLayoutProps) {
           survive while the detail pane is open. */}
       <section
         class="vault-list"
-        classList={{ 'pane-hidden': props.mobile() && props.pane() === 'detail' && !props.collapsing() }}
-        aria-hidden={props.mobile() && props.pane() === 'detail' && !props.collapsing()}
+        classList={{ 'pane-hidden': props.mobile() && props.pane() === 'detail' && !props.flying() }}
+        aria-hidden={props.mobile() && props.pane() === 'detail' && !props.flying()}
       >
         <ItemList
           onMenu={props.mobile() ? props.onMenu : undefined}

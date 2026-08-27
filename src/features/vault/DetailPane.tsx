@@ -23,6 +23,8 @@ interface DetailPaneProps {
 export default function DetailPane(props: DetailPaneProps) {
   return (
     <aside class="vault-detail" ref={props.ref}>
+      {/* Opaque backing for the row → pane flight; inert otherwise. */}
+      <div class="detail-veil" aria-hidden="true" />
       <Show when={props.editingId !== undefined} fallback={<ItemDetail {...props} />}>
         <Editor
           id={props.editingId ?? undefined}

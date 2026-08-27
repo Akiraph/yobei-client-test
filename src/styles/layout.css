@@ -406,6 +406,37 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+/* The pane must read as one solid rectangle while it grows out of a row, so an
+   opaque veil sits behind its content, clipped by the same clip-path as the
+   pane. Fully opaque on purpose: the list is still laid out underneath during
+   the flight and must not shine through. It snaps in with the flight and only
+   fades out afterwards, by which time the list is hidden. */
+.detail-veil {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(var(--drawer-bg), var(--drawer-bg)), var(--canvas);
+  transition: opacity var(--dur-fast) var(--ease-fog);
+}
+
+.vault-detail.flying .detail-veil {
+  opacity: 1;
+  transition: none;
+}
+
+.vault-detail.flying {
+  will-change: transform, clip-path;
+  z-index: 30;
+}
+
+.detail-pane,
+.detail-empty {
+  position: relative;
+  z-index: 1;
 }
 
 .detail-pane {
@@ -863,9 +894,6 @@
 .settings-entry-name { display: block; font-size: 16px; font-weight: 500; }
 .settings-entry-desc { display: block; font-size: 13px; color: var(--fog-400); }
 .settings-entry-chevron { flex-shrink: 0; color: var(--fog-300); }
-
-.settings-anchor { scroll-margin-top: 8px; }
-.settings-subpage-back { margin-bottom: 12px; }
 
 .settings-panel {
   animation: settings-panel-in 160ms var(--ease-fog) both;
